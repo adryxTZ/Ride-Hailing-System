@@ -1,0 +1,186 @@
+# Server stack shared by UAT and production (D8, D11 "launch topology"):
+#   caddy (TLS) -> api (all roles, one container) + admin; redis; alloy (monitoring).
+# Postgres is managed and external: NEXA_DATABASE_URL in api.env points at it.
+#
+# Never used alone: always with an environment overlay, e.g.
+#   docker compose -f compose.yml -f compose.production.yml up -d --wait
+# (infra/deploy/ops/deploy.sh does this, after running migrations).
+#
+# Images are immutable tags pushed by CI (D12 #25): API_IMAGE and ADMIN_IMAGE come
+# from .env next to this file, written by the deploy job. No watchtower (D12 #24).
+#
+# Profiles:
+#   ops   one-off jobs: migrate, seed, verify-ledger, backup, restore (docker compose run)
+#   maps  self-hosted OSRM routing + Nominatim places (see infra/README.md "Maps")
+
+# Shared settings, merged into each long-running service below.
+x-logging: &logging
+  # Log rotation: at most 5 x 20 MB per container, so logs never fill the disk.
+  driver: json-file
+  options: { max-size: "20m", max-file: "5", tag: "{{.Name}}" }
+
+x-backend: &backend
+  image: ${API_IMAGE:?set API_IMAGE (ghcr.io/<owner>/<repo>/nexa:<sha>) in .env}
+  env_file: [api.env]
+  environment: &backend-env
+    NEXA_JWT_KEYS_DIR: /keys
+    NEXA_UPLOAD_DIR: /app/data/uploads
+    NEXA_REDIS_URL: redis://redis:6379/0
+  volumes:
+    - keys:/keys
+    - uploads:/app/data/uploads
+    # Files issued by providers (Selcom payout RSA key, regulator signing key);
+    # mode 600 on the host, never in the repository.
+    - ./secrets:/secrets:ro
+  logging: *logging
+
+name: ${COMPOSE_PROJECT_NAME:-platform}
+services:
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    # Public ports are variables only so a rehearsal can run beside other services.
+    ports: ["${PUBLIC_HTTP_PORT:-80}:80", "${PUBLIC_HTTPS_PORT:-443}:443", "${PUBLIC_HTTPS_PORT:-443}:443/udp"]
+    environment:
+      API_DOMAIN: ${API_DOMAIN:?set API_DOMAIN}
+      ADMIN_DOMAIN: ${ADMIN_DOMAIN:?set ADMIN_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL}
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:9180/metrics"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      api: { condition: service_healthy }
+      admin: { condition: service_healthy }
+    deploy: { resources: { limits: { cpus: "0.50", memory: 128M } } }
+    logging: *logging
+
+  api:
+    <<: *backend
+    restart: unless-stopped
+    command: ["serve", "--roles=${API_ROLES:-api,realtime,worker,scheduler}"]
+    environment:
+      <<: *backend-env
+      NEXA_HTTP_ADDR: 0.0.0.0:8080
+    healthcheck:
+      test: ["CMD", "/app/probe"]
+      interval: 10s
+      timeout: 4s
+      retries: 3
+      start_period: 15s
+    depends_on:
+      redis: { condition: service_healthy }
+    # Sized from D11: ~120 MB idle, ~250 MB at 600 online drivers.
+    deploy: { resources: { limits: { cpus: "${API_CPUS:-1.5}", memory: "${API_MEMORY:-512M}" } } }
+
+  admin:
+    image: ${ADMIN_IMAGE:?set ADMIN_IMAGE (ghcr.io/<owner>/<repo>/admin:<sha>-<env>) in .env}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/login"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    deploy: { resources: { limits: { cpus: "0.50", memory: 256M } } }
+    logging: *logging
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # Presence, rate limits and caches only: losing Redis loses nothing durable (D12 #2),
+    # so no persistence and an LRU cap.
+    command: ["redis-server", "--maxmemory", "${REDIS_MAXMEMORY:-192mb}", "--maxmemory-policy", "allkeys-lru", "--save", "", "--appendonly", "no"]
+    healthcheck: { test: ["CMD", "redis-cli", "ping"], interval: 10s, timeout: 3s, retries: 5 }
+    deploy: { resources: { limits: { cpus: "0.50", memory: 256M } } }
+    logging: *logging
+
+  # Grafana Alloy: scrapes Caddy, host, Redis and Postgres (River queue) metrics and
+  # ships them plus container logs to Grafana Cloud. Config: monitoring/config.alloy.
+  alloy:
+    image: grafana/alloy:v1.10.2
+    restart: unless-stopped
+    command: ["run", "--server.http.listen-addr=127.0.0.1:12345", "--storage.path=/var/lib/alloy/data", "/etc/alloy/config.alloy"]
+    env_file: [monitoring.env]
+    environment:
+      API_DOMAIN: ${API_DOMAIN}
+      DEPLOY_ENV: ${DEPLOY_ENV:?set DEPLOY_ENV (uat|production)}
+    volumes:
+      - ./monitoring/config.alloy:/etc/alloy/config.alloy:ro
+      - ./monitoring/postgres-queries.yml:/etc/alloy/postgres-queries.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host/root:ro
+      - ${METRICS_TEXTFILE_DIR:-/var/lib/platform/metrics}:/textfile:ro
+      - alloy_data:/var/lib/alloy/data
+    deploy: { resources: { limits: { cpus: "0.50", memory: 256M } } }
+    logging: *logging
+
+  # ---- one-off jobs (profile "ops"): run by ops/deploy.sh and cron, never by "up" ----
+  migrate:
+    <<: *backend
+    profiles: [ops]
+    command: ["migrate"]
+  seed:
+    <<: *backend
+    profiles: [ops]
+    command: ["seed", "all"]
+  verify-ledger:
+    <<: *backend
+    profiles: [ops]
+    command: ["verify-ledger"]
+  backup:
+    build: ./backup
+    image: platform-backup:local
+    profiles: [ops]
+    env_file: [backup.env]
+    environment:
+      BACKUP_ENV: ${DEPLOY_ENV}
+    volumes:
+      - keys:/data/keys:ro
+      - uploads:/data/uploads:ro
+      - ${METRICS_TEXTFILE_DIR:-/var/lib/platform/metrics}:/textfile
+    command: ["backup"]
+    logging: *logging
+
+  # ---- self-hosted routing and places (profile "maps"); data prepared by maps/prepare.sh ----
+  osrm:
+    image: ghcr.io/project-osrm/osrm-backend:v26.9.0-debian
+    profiles: [maps]
+    restart: unless-stopped
+    command: ["osrm-routed", "--algorithm", "mld", "--max-table-size", "1000", "/data/region.osrm"]
+    volumes: ["${MAPS_DATA_DIR:-/var/lib/platform/maps}/osrm:/data:ro"]
+    deploy: { resources: { limits: { memory: "${OSRM_MEMORY:-2G}" } } }
+    logging: *logging
+  nominatim:
+    image: mediagis/nominatim:5.1
+    profiles: [maps]
+    restart: unless-stopped
+    environment:
+      # The merged country extract written by maps/prepare.sh; imported once into
+      # the volume on first start (hours), then served. Re-import monthly.
+      PBF_PATH: /maps/region.osm.pbf
+      # Password of Nominatim's own internal database (never exposed outside the container).
+      NOMINATIM_PASSWORD: ${NOMINATIM_DB_PASSWORD:-}
+      IMPORT_STYLE: address
+      THREADS: "${NOMINATIM_THREADS:-2}"
+    volumes:
+      - "${MAPS_DATA_DIR:-/var/lib/platform/maps}:/maps:ro"
+      - nominatim_db:/var/lib/postgresql/16/main
+    shm_size: 1g
+    deploy: { resources: { limits: { memory: "${NOMINATIM_MEMORY:-4G}" } } }
+    logging: *logging
+
+volumes:
+  keys: {}
+  uploads: {}
+  caddy_data: {}
+  caddy_config: {}
+  alloy_data: {}
+  nominatim_db: {}

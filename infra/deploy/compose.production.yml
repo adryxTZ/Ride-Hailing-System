@@ -1,0 +1,29 @@
+# Production overlay: the all-roles API gets the most room. When traffic justifies a
+# split (D8), set API_ROLES=api,realtime in .env and enable the worker below with
+#   docker compose ... --profile split up -d --wait
+#   docker compose -f compose.yml -f compose.production.yml ...
+services:
+  api:
+    deploy: { resources: { limits: { cpus: "2.0", memory: 768M } } }
+  redis:
+    deploy: { resources: { limits: { memory: 384M } } }
+    command: ["redis-server", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru", "--save", "", "--appendonly", "no"]
+
+  # Background roles in their own container, only with --profile split.
+  worker:
+    image: ${API_IMAGE}
+    profiles: [split]
+    restart: unless-stopped
+    env_file: [api.env]
+    environment:
+      NEXA_JWT_KEYS_DIR: /keys
+      NEXA_UPLOAD_DIR: /app/data/uploads
+      NEXA_REDIS_URL: redis://redis:6379/0
+    command: ["serve", "--roles=worker,scheduler"]
+    healthcheck: { disable: true } # no HTTP listener in a worker-only process
+    volumes: ["keys:/keys", "uploads:/app/data/uploads", "./secrets:/secrets:ro"]
+    depends_on: { redis: { condition: service_healthy } }
+    deploy: { resources: { limits: { cpus: "1.0", memory: 384M } } }
+    logging:
+      driver: json-file
+      options: { max-size: "20m", max-file: "5" }

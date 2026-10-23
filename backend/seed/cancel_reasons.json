@@ -1,0 +1,106 @@
+{
+  "rider": [
+    {
+      "key": "plans_changed",
+      "label": {
+        "en": "My plans changed",
+        "sw": "Mipango yangu imebadilika"
+      }
+    },
+    {
+      "key": "found_alternative",
+      "label": {
+        "en": "Found a better alternative",
+        "sw": "Nimepata njia nyingine bora"
+      }
+    },
+    {
+      "key": "driver_not_moving",
+      "label": {
+        "en": "Driver not getting closer",
+        "sw": "Dereva hakaribii"
+      }
+    },
+    {
+      "key": "driver_asked_cancel",
+      "label": {
+        "en": "Driver asked me to cancel",
+        "sw": "Dereva ameniomba nighairi"
+      }
+    },
+    {
+      "key": "long_pickup",
+      "label": {
+        "en": "Pickup is taking too long",
+        "sw": "Kuchukuliwa kunachukua muda mrefu"
+      }
+    },
+    {
+      "key": "pay_outside",
+      "label": {
+        "en": "Driver asked to pay outside the app",
+        "sw": "Dereva ameomba malipo nje ya programu"
+      }
+    },
+    {
+      "key": "price_dispute",
+      "label": {
+        "en": "Price dispute with driver",
+        "sw": "Mgogoro wa bei na dereva"
+      }
+    },
+    {
+      "key": "other",
+      "label": {
+        "en": "Other",
+        "sw": "Nyingine"
+      },
+      "free_text": true
+    }
+  ],
+  "driver": [
+    {
+      "key": "rider_no_show",
+      "label": {
+        "en": "Customer did not show up",
+        "sw": "Mteja hakutokea"
+      }
+    },
+    {
+      "key": "wrong_location",
+      "label": {
+        "en": "Wrong pickup location",
+        "sw": "Mahali pa kuchukua si sahihi"
+      }
+    },
+    {
+      "key": "cargo_mismatch",
+      "label": {
+        "en": "Cargo does not match the request",
+        "sw": "Mzigo haulingani na ombi"
+      }
+    },
+    {
+      "key": "vehicle_issue",
+      "label": {
+        "en": "Vehicle problem",
+        "sw": "Tatizo la gari"
+      }
+    },
+    {
+      "key": "unsafe",
+      "label": {
+        "en": "I felt unsafe",
+        "sw": "Sikujisikia salama"
+      }
+    },
+    {
+      "key": "other",
+      "label": {
+        "en": "Other",
+        "sw": "Nyingine"
+      },
+      "free_text": true
+    }
+  ]
+}

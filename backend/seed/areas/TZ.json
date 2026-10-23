@@ -1,0 +1,10 @@
+{
+  "_note": "Launch areas for Tanzania. Polygons are rough outlines in GeoJSON [lng, lat] order; seed converts them to H3 res-7 cells once and never overwrites cells staff have edited.",
+  "country": "TZ",
+  "areas": [
+    { "code": "dar-es-salaam", "name": "Dar es Salaam", "status": "ACTIVE",
+      "polygon": [[39.05, -7.05], [39.42, -7.05], [39.42, -6.55], [39.05, -6.55], [39.05, -7.05]] },
+    { "code": "pwani", "name": "Pwani", "status": "DRAFT",
+      "polygon": [[38.55, -7.60], [39.05, -7.60], [39.05, -6.20], [38.55, -6.20], [38.55, -7.60]] }
+  ]
+}

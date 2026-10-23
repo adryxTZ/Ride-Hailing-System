@@ -1,0 +1,17 @@
+{
+  "tripId": "e4d1f0aa-0000-4000-8000-000000000001",
+  "originCoordinates": "-6.7924,39.2083",
+  "endCoordinates": "-6.81,39.28",
+  "startTime": "2026-07-21 11:00:00",
+  "endTime": "2026-07-21 11:45:30",
+  "totalFareAmount": 25000,
+  "tripDistance": 12450,
+  "rating": 4,
+  "driverEarning": 22500,
+  "driverLicenseNumber": "4000123454",
+  "vehicleRegistrationNumber": "T921ABC",
+  "passengerName": "Asha Musa",
+  "passengerPhone": "+255715000000",
+  "pickupPoint": "Hazina",
+  "dropOffPoint": "Makulu"
+}

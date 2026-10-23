@@ -1,0 +1,22 @@
+{
+  "name": "@platform/push",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Push notification setup shared by the apps: permission, Android channels, Expo push token, registration with the API.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "expo-constants": "*",
+    "expo-device": "*",
+    "expo-notifications": "*",
+    "react": "*",
+    "react-native": "*"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.0",
+    "typescript": "^5.9.0"
+  }
+}

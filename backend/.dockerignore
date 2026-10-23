@@ -1,0 +1,11 @@
+# Keep the build context small and free of local state: binaries, uploads,
+# signing keys and environment files never enter an image.
+bin/
+nexa
+tmp/
+data/
+.keys/
+.env
+.env.*
+coverage.out
+*.md

@@ -1,0 +1,18 @@
+{
+  "name": "mobile-apps",
+  "private": true,
+  "packageManager": "pnpm@10.34.7",
+  "scripts": {
+    "gen:api": "pnpm --filter @platform/api-client gen",
+    "typecheck": "turbo run typecheck",
+    "lint": "biome check .",
+    "lint:fix": "biome check . --write",
+    "test": "turbo run test"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.2.0",
+    "playwright": "1.64.0",
+    "turbo": "^2.5.0",
+    "typescript": "^5.9.0"
+  }
+}

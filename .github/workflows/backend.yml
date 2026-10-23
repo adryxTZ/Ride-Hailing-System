@@ -1,0 +1,78 @@
+# Backend checks. Self-contained: everything it needs lives under backend/, so this
+# file moves with that folder if the backend is ever split out (ADR 0007).
+# Runs on pull requests touching backend/, and is called by release.yml on main/tags.
+name: backend
+on:
+  pull_request:
+    paths: ["backend/**", ".github/workflows/backend.yml"]
+  workflow_call: {}
+permissions: { contents: read }
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults: { run: { working-directory: backend } }
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env: { POSTGRES_USER: nexa, POSTGRES_PASSWORD: nexa, POSTGRES_DB: nexa }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U nexa -h 127.0.0.1" --health-interval 5s --health-timeout 3s --health-retries 30
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      # CI-only throwaway service containers above; not a shared environment (D12 #26).
+      NEXA_BRAND: nexa
+      NEXA_DATABASE_URL: postgres://nexa:nexa@localhost:5432/nexa?sslmode=disable
+      NEXA_TEST_DATABASE_URL: postgres://nexa:nexa@localhost:5432/nexa?sslmode=disable
+      NEXA_REDIS_URL: redis://localhost:6379/0
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version-file: backend/go.mod, cache-dependency-path: backend/go.sum }
+      - name: gofmt
+        run: |
+          unformatted="$(gofmt -l ./internal ./cmd ./tools)"
+          if [ -n "$unformatted" ]; then echo "gofmt needed:"; echo "$unformatted"; exit 1; fi
+      - run: go vet ./...
+      - uses: golangci/golangci-lint-action@v8
+        with: { working-directory: backend }
+      - name: Brand-name guard (ADR 0005)
+        run: make -s brand-check
+      - run: go build -o bin/nexa ./cmd/nexa
+      - name: Migrate and seed the test database
+        run: ./bin/nexa migrate && ./bin/nexa seed all
+      - run: go test ./... -count=1 -race
+      - name: Lint API contract
+        run: npx --yes @redocly/cli@2.2.0 lint api/openapi.yaml
+
+  # The contract is consumed by two TS workspaces that commit their generated
+  # client (ADR 0007). A contract change without `pnpm gen:api` in both fails here.
+  # Only meaningful in the monorepo; skipped when apps/ or frontend/ are absent.
+  api-clients:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Generated clients match backend/api/openapi.yaml
+        env:
+          # Same generator version as both lockfiles (openapi-typescript@7.13.0).
+          GENERATOR: openapi-typescript@7.13.0
+        run: |
+          stale=0
+          for client in apps/packages/api-client frontend/packages/api-client; do
+            [ -d "$client" ] || { echo "skip $client (not in this checkout)"; continue; }
+            fresh="/tmp/$(echo "$client" | tr / _).d.ts"
+            npx --yes "$GENERATOR" backend/api/openapi.yaml -o "$fresh"
+            if ! diff -q "$fresh" "$client/src/generated/schema.d.ts" >/dev/null; then
+              echo "::error::$client is stale: run 'pnpm gen:api' in $(dirname "$(dirname "$client")") and commit"
+              stale=1
+            fi
+          done
+          exit $stale

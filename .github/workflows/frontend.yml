@@ -1,0 +1,33 @@
+# Web checks (admin dashboard + website). Self-contained under frontend/: own lockfile
+# and own generated API client (committed), so it builds without the backend checked
+# out (ADR 0007). Regenerate the client from a deployed backend with
+#   OPENAPI_SPEC=https://<api>/v1/openapi.yaml pnpm gen:api
+# Runs on pull requests touching frontend/ (or the contract), and from release.yml.
+name: frontend
+on:
+  pull_request:
+    paths: ["frontend/**", "backend/api/openapi.yaml", ".github/workflows/frontend.yml"]
+  workflow_call: {}
+permissions: { contents: read }
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults: { run: { working-directory: frontend } }
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+      # Build-time only; the deployed images bake their own URL (release.yml).
+      NEXT_PUBLIC_API_URL: http://localhost:8080/v1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm, cache-dependency-path: frontend/pnpm-lock.yaml }
+      - run: pnpm install --frozen-lockfile
+      - name: Typecheck (tsc)
+        run: pnpm typecheck
+      - name: Lint (biome)
+        run: pnpm lint
+      - name: Build admin (next build)
+        run: pnpm --filter @platform-web/admin build

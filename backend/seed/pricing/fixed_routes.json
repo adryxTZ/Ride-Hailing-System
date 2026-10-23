@@ -1,0 +1,49 @@
+{
+  "_note": "PLACEHOLDER example fixed fares (TZS). Radii in metres; coordinates are area centres. The operator sets real routes in the admin.",
+  "routes": [
+    {
+      "service": "taxi",
+      "name": "City centre – Airport (JNIA) · Standard",
+      "origin": {
+        "lat": -6.8165,
+        "lng": 39.2894
+      },
+      "origin_radius_m": 2000,
+      "destination": {
+        "lat": -6.8781,
+        "lng": 39.2026
+      },
+      "destination_radius_m": 1500,
+      "bidirectional": true,
+      "vehicle_classes": [
+        "standard"
+      ],
+      "price": 35000,
+      "currency": "TZS",
+      "includes_loaders": false,
+      "surge_applies": false
+    },
+    {
+      "service": "taxi",
+      "name": "City centre – Airport (JNIA) · XL",
+      "origin": {
+        "lat": -6.8165,
+        "lng": 39.2894
+      },
+      "origin_radius_m": 2000,
+      "destination": {
+        "lat": -6.8781,
+        "lng": 39.2026
+      },
+      "destination_radius_m": 1500,
+      "bidirectional": true,
+      "vehicle_classes": [
+        "xl"
+      ],
+      "price": 50000,
+      "currency": "TZS",
+      "includes_loaders": false,
+      "surge_applies": false
+    }
+  ]
+}

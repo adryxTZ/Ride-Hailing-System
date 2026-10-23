@@ -1,0 +1,116 @@
+// Grafana Alloy: the one observability container per host (D8, D11).
+// Metrics -> Grafana Cloud Prometheus (remote_write); container logs -> Grafana Cloud Loki.
+// Alert rules for these series: rules/alerts.yml (loaded into the Grafana Cloud ruler).
+// Every series carries env="<uat|production>" so one Grafana stack serves both hosts.
+
+// ---------- destinations ----------
+prometheus.remote_write "cloud" {
+  endpoint {
+    url = sys.env("GRAFANA_PROM_URL")
+    basic_auth {
+      username = sys.env("GRAFANA_PROM_USER")
+      password = sys.env("GRAFANA_CLOUD_TOKEN")
+    }
+  }
+  external_labels = { env = sys.env("DEPLOY_ENV") }
+}
+
+loki.write "cloud" {
+  endpoint {
+    url = sys.env("GRAFANA_LOKI_URL")
+    basic_auth {
+      username = sys.env("GRAFANA_LOKI_USER")
+      password = sys.env("GRAFANA_CLOUD_TOKEN")
+    }
+  }
+  external_labels = { env = sys.env("DEPLOY_ENV") }
+}
+
+// ---------- HTTP: Caddy request metrics (API p95, 5xx rate) ----------
+// Requests to API_DOMAIN get service="api", so rules never name a domain.
+prometheus.scrape "caddy" {
+  targets         = [{ __address__ = "caddy:9180", job = "caddy" }]
+  scrape_interval = "15s"
+  forward_to      = [prometheus.relabel.caddy.receiver]
+}
+
+prometheus.relabel "caddy" {
+  rule {
+    source_labels = ["host"]
+    regex         = sys.env("API_DOMAIN") + "(:[0-9]+)?" // Host may carry a port off 443
+    target_label  = "service"
+    replacement   = "api"
+  }
+  forward_to = [prometheus.remote_write.cloud.receiver]
+}
+
+// ---------- host: CPU, memory, disk + textfile metrics (backup, ledger verify) ----------
+prometheus.exporter.unix "host" {
+  procfs_path = "/host/proc"
+  sysfs_path  = "/host/sys"
+  rootfs_path = "/host/root"
+  textfile {
+    directory = "/textfile"
+  }
+}
+
+prometheus.scrape "host" {
+  targets         = prometheus.exporter.unix.host.targets
+  scrape_interval = "30s"
+  forward_to      = [prometheus.remote_write.cloud.receiver]
+}
+
+// ---------- Redis (presence, caches) ----------
+prometheus.exporter.redis "redis" {
+  redis_addr = "redis:6379"
+}
+
+prometheus.scrape "redis" {
+  targets         = prometheus.exporter.redis.redis.targets
+  scrape_interval = "30s"
+  forward_to      = [prometheus.remote_write.cloud.receiver]
+}
+
+// ---------- Postgres: connections + River queue depth (custom queries) ----------
+prometheus.exporter.postgres "db" {
+  data_source_names          = [sys.env("MONITOR_DATABASE_URL")]
+  custom_queries_config_path = "/etc/alloy/postgres-queries.yml"
+  disable_default_metrics    = false
+}
+
+prometheus.scrape "db" {
+  targets         = prometheus.exporter.postgres.db.targets
+  scrape_interval = "60s"
+  forward_to      = [prometheus.remote_write.cloud.receiver]
+}
+
+// ---------- container logs ----------
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+discovery.relabel "containers" {
+  targets = discovery.docker.containers.targets
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service"
+  }
+}
+
+loki.source.docker "containers" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.relabel.containers.output
+  forward_to = [loki.process.json.receiver]
+}
+
+// The API logs one JSON line per request (slog: level, msg, path, status, ms);
+// promote level and status to labels for cheap filtering in Grafana.
+loki.process "json" {
+  stage.json {
+    expressions = { level = "level", status = "status" }
+  }
+  stage.labels {
+    values = { level = "", status = "" }
+  }
+  forward_to = [loki.write.cloud.receiver]
+}

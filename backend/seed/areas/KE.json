@@ -1,0 +1,8 @@
+{
+  "_note": "Example second country (DRAFT until the owner turns Kenya on).",
+  "country": "KE",
+  "areas": [
+    { "code": "nairobi", "name": "Nairobi", "status": "DRAFT",
+      "polygon": [[36.65, -1.45], [37.10, -1.45], [37.10, -1.15], [36.65, -1.15], [36.65, -1.45]] }
+  ]
+}

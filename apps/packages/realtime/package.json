@@ -1,0 +1,18 @@
+{
+  "name": "@platform/realtime",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Websocket client for /v1/ws: first-frame auth, heartbeat, reconnect with backoff, plus a React hook.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "react": "*"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.0",
+    "typescript": "^5.9.0"
+  }
+}

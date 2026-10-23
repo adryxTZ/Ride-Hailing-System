@@ -1,0 +1,9 @@
+packages:
+  - "rider"
+  - "driver"
+  - "packages/*"
+
+# One React for every workspace package (peer auto-install must not pull a newer react-dom).
+overrides:
+  react: 19.2.3
+  react-dom: 19.2.3

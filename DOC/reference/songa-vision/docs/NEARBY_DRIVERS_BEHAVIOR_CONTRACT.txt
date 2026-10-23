@@ -1,0 +1,204 @@
+===============================================================================
+ SONGA — "DRIVER ONLINE / NEARBY DRIVERS" BEHAVIOR CONTRACT
+ How the backend behaves, and how the driver app and rider app MUST behave
+ so that an online driver is actually visible to riders.
+ Last updated: 2026-08-12
+===============================================================================
+
+-------------------------------------------------------------------------------
+0. THE ONE IDEA TO REMEMBER
+-------------------------------------------------------------------------------
+"Online" is NOT one thing. It is TWO independent conditions, and BOTH must be
+true for a rider to see a driver:
+
+   (A) STATUS  — the driver pressed "Go Online" (status flag set on backend).
+   (B) FRESH GPS — the driver's app is still sending location pings, and the
+       most recent one is recent enough (see the staleness window below).
+
+The driver app has always been good at (A) and bad at (B). The backend
+correctly hides a driver whose GPS has gone stale — but silently. That is the
+whole bug: a driver is "online" (A) but invisible because their GPS stream
+stopped (B), and nobody — driver, rider, or support — could see why.
+
+RULE OF THUMB: Being online is a PROMISE TO KEEP SENDING LOCATION, not a
+one-time switch. If the app stops sending, the driver MUST be treated (and
+told) as effectively offline.
+
+-------------------------------------------------------------------------------
+1. HOW THE BACKEND BEHAVES (source of truth)
+-------------------------------------------------------------------------------
+Where driver presence lives:
+  - Purely in Redis (no SQL on the hot path):
+      * driver:{driver_id}:state   — a hash whose "data" field is JSON holding
+        is_verified, last_update (ISO timestamp of the last ping), latitude,
+        longitude, h3_index, rating, car_type_id, active_trip, etc.
+      * h3:{hex}:drivers            — a set of driver_ids present in that H3
+        map cell.
+  - Going online (POST /api/users/driver/status/) WRITES this state with
+    last_update = now and ADDS the driver to their h3 cell. So immediately
+    after going online the driver is fresh — even before any GPS ping.
+  - Every location ping (over the location WebSocket, type "location_update")
+    REFRESHES last_update and the coordinates. This is condition (B).
+
+How the rider "nearby drivers" endpoint works:
+  POST /api/trip/nearby-drivers/   (body: latitude, longitude, carType)
+  -> indexes the rider's location to an H3 cell
+  -> expands outward in H3 rings up to nearby_radius_km (default 5 km)
+  -> for each candidate driver, ENFORCES these gates (get_nearby_drivers):
+        * is_verified must be true
+        * TELEMETRY FRESHNESS: now - last_update <= telemetry_staleness_limit
+          (currently 300s; target 120s once the driver heartbeat ships)
+        * not busy on another active trip (unless nearly done)
+        * car_type / cargo filters if requested
+        * has a real (non-0,0) location
+  -> caps results to nearby_radius_km by straight-line distance, sorts nearest
+     first, and returns them.
+  -> The result is CACHED for 60 seconds per H3 cell. So a rider can see a
+     position up to ~60s old even before staleness is considered. Effective
+     maximum "linger" a stale driver can appear = staleness_window + 60s.
+
+Response shape (per driver) — NOW INCLUDES FRESHNESS:
+  {
+    "driver_id":   "...",
+    "vehicle_type":"Truck",
+    "location":    { "latitude": .., "longitude": .. },
+    "distance_km": 1.23,
+    "last_seen":   "2026-08-12T11:28:20+00:00",   <-- NEW: raw last ping time
+    "age_seconds": 12.4                            <-- NEW: how old that ping is
+  }
+  Envelope: { "success": true,
+              "message": "Drivers found... Number of drivers: N",
+              "data": { "drivers": [ ... ] } }
+
+  Every driver in the list has ALREADY passed the freshness gate. last_seen /
+  age_seconds are provided so the rider app and support can SEE freshness and
+  so "the driver isn't showing" becomes a one-call diagnosis instead of a guess.
+
+Radius: nearby_radius_km = 5 km (admin-tunable in MatchingConfig).
+Staleness window: telemetry_staleness_limit = 300s today, admin-tunable in
+  MatchingConfig. DO NOT lower it to 120s until the driver app heartbeat (below)
+  is live — otherwise drivers drop out FASTER while the app still stops pinging
+  when parked, making the problem worse.
+
+What the backend NEVER does:
+  - It does not invent locations, does not keep a driver visible on an old
+    position, and does not tell the rider "this one is stale" — it simply
+    omits stale drivers. Freshness is the app's job to maintain.
+
+-------------------------------------------------------------------------------
+2. WHAT THE DRIVER APP MUST DO (to stay visible) — condition (B)
+-------------------------------------------------------------------------------
+The moment the driver goes online, the app takes on a CONTRACT to keep a fresh
+location flowing until the driver goes offline. To honor it:
+
+  2.1 HEARTBEAT (most important).
+      Send the LAST KNOWN position over the location WebSocket at least every
+      ~25 seconds REGARDLESS OF MOVEMENT. Do not rely on "location changed"
+      events — a parked driver, or an OEM power-saving phone (Tecno/Infinix/
+      Xiaomi), fires no movement events and would otherwise go silent.
+      The 25s heartbeat keeps last_update well inside even a 120s window.
+      Payload (unchanged): { type:"location_update", driver_id, latitude,
+      longitude, timestamp }.
+
+  2.2 KEEP RUNNING IN THE BACKGROUND while online.
+      Enable background location (location pkg: enableBackgroundMode(true);
+      geolocator: AndroidSettings.foregroundNotificationConfig) tied to the
+      existing foreground-service notification, so a screen-off / pocketed
+      phone keeps sending. Disable it again when the driver goes offline.
+
+  2.3 DETECT A DEAD SOCKET AND TELL THE DRIVER.
+      Watch the location WebSocket connection status (and/or failed heartbeat
+      sends). If disconnected for >~30s, the driver is effectively invisible to
+      riders — SHOW A BANNER: "You appear offline to riders — check your
+      connection." Clear it on reconnect. A driver must never think they are
+      visible when they are not.
+
+  2.4 LIFECYCLE.
+      Go online   -> POST /driver/status/ online, connect location socket,
+                     start heartbeat + background mode, send first ping.
+      While online-> heartbeat every ~25s; also send on real movement.
+      Go offline  -> POST /driver/status/ offline, stop heartbeat, disable
+                     background mode, disconnect. (Backend GC also removes the
+                     driver, but the app should stop cleanly.)
+      App killed / crash -> treat as offline; on relaunch, re-establish the
+                     above before showing "You are online".
+
+  DRIVER-APP DON'Ts:
+   - Don't send only on movement.  - Don't show "Online" while the socket is
+   down.  - Don't stop the stream when the screen turns off.  - Don't send
+   (0,0) or a null island fix.
+
+-------------------------------------------------------------------------------
+3. WHAT THE RIDER APP MUST DO (to not fail silently)
+-------------------------------------------------------------------------------
+  3.1 REQUIRE ITS OWN GPS FIX.
+      fetchNearbyDrivers needs the rider's lat/lng. If there is no fix yet, do
+      NOT silently do nothing — show "Getting your location..." / prompt for
+      location permission, and retry once a fix arrives.
+
+  3.2 POLL.
+      Call POST /trip/nearby-drivers/ about every 12s with the rider's current
+      position. Expect results up to ~60s cached — that is normal.
+
+  3.3 HANDLE AN EMPTY LIST EXPLICITLY.
+      success:true with data.drivers == [] means "nobody eligible nearby right
+      now", NOT an error. Show "No drivers nearby right now" instead of a blank
+      map. Distinguish this from an actual request failure (non-200 / network),
+      which should show a retryable error.
+
+  3.4 (OPTIONAL) USE FRESHNESS.
+      Each driver now carries last_seen / age_seconds. The app MAY de-emphasise
+      or drop markers whose age_seconds is high, and should not treat a marker
+      as a live promise of exact position — it is the last known ping, at most
+      staleness_window + 60s old.
+
+  RIDER-APP DON'Ts:
+   - Don't render an empty map with no message.  - Don't call the endpoint with
+   a missing/last-known-stale rider position.  - Don't treat empty results as a
+   crash.
+
+-------------------------------------------------------------------------------
+4. FAILURE MODES → WHO REACTS, AND HOW
+-------------------------------------------------------------------------------
+  Symptom: "Driver is online but riders can't see them."
+    Cause: GPS stream stopped (screen off / power-saving / movement-only).
+    Fix owner: DRIVER APP (heartbeat + background mode). Backend is correct to
+    hide them. Driver should also see the "appear offline" banner.
+
+  Symptom: "Driver shows in the wrong / old place."
+    Cause: last position is stale but still inside the window (+60s cache).
+    Reaction: heartbeat keeps it current; tightening staleness (after heartbeat
+    ships) shortens how long an old position can linger.
+
+  Symptom: "Rider sees an empty map."
+    Cause A: rider has no GPS fix -> rider app must prompt/retry (3.1).
+    Cause B: genuinely no eligible drivers -> rider app shows "No drivers
+    nearby" (3.3).
+
+  Symptom: "Driver disappears exactly a few minutes after going online."
+    Cause: classic no-heartbeat staleness expiry. Fix owner: DRIVER APP.
+
+  Diagnosis tool (support/back-office): call /trip/nearby-drivers/ at the
+  rider's location and read age_seconds. High/absent -> driver-side telemetry
+  problem. Present & low but rider still complains -> rider-app rendering.
+
+-------------------------------------------------------------------------------
+5. ROLLOUT ORDER (do not skip)
+-------------------------------------------------------------------------------
+  Step 1 (DONE, backend, additive, no behavior change):
+         nearby-drivers returns last_seen + age_seconds. Safe to ship alone.
+  Step 2 (DRIVER APP): heartbeat + background mode + offline banner. This is
+         what actually fixes the majority of "invisible driver" cases.
+  Step 3 (BACKEND CONFIG, only AFTER Step 2 is live in the field): lower
+         telemetry_staleness_limit 300s -> ~120s via MatchingConfig (admin
+         change, no deploy) to make stale drivers drop faster now that the
+         heartbeat keeps honest drivers fresh.
+  Step 4 (RIDER APP): no-GPS message + empty-list message + optional freshness
+         de-emphasis.
+
+  Shipping Step 3 before Step 2 REGRESSES the product (drivers vanish faster
+  while still not sending pings). Order matters.
+
+===============================================================================
+END
+===============================================================================

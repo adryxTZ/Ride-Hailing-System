@@ -1,0 +1,18 @@
+{
+  "_note": "Commission 10% (LATRA allows 10-20%). VAT 18% on platform revenue. LATRA levy 1% of the fare (order: 0.5-1%), borne by the platform so the rider's fare stays inside LATRA's caps. No booking fee: LATRA's fare order lists none. Pickup waiting fee capped at 3% of the fare (LATRA order: waiting fee up to 3%). Fares are rounded to the nearest 50 TZS. Free cancel for 2 minutes after a driver accepts; no-show after 5 minutes waiting; the driver gets 80% of a cancellation fee. Driver debt: a driver is put on hold at 5,000 TZS owed, or after 7 days owing 1,000 TZS or more; the smallest mobile-money payment is 1,000 TZS (the gateway minimum), so nobody is held for less than they can pay.",
+  "commission_rate": "0.1000",
+  "vat_rate": "0.1800",
+  "vat_base": "COMMISSION",
+  "levy_rate": "0.0100",
+  "levy_borne_by": "PLATFORM",
+  "booking_fee": "0",
+  "waiting_cap_rate": "0.0300",
+  "fare_rounding": "50",
+  "cancel_free_s": 120,
+  "no_show_after_s": 300,
+  "cancel_driver_share": "0.8000",
+  "debt_soft_limit": "1000",
+  "debt_hard_limit": "5000",
+  "debt_soft_grace_days": 7,
+  "payin_min_amount": "1000"
+}

@@ -1,0 +1,63 @@
+{
+  "_note": "Defaults from LATRA's ride-hailing fare order (Government Gazette, 17 Apr 2026, in force ~1 May 2026): cars base 1,100-1,200, per km 1,100-1,300, per min 120-150, trips up to 1 km 4,000-5,000; motorcycles up to 1 km 1,500-2,000; three-wheelers up to 1 km 3,000-4,000. No per-km bands were published for boda/bajaji: those use Bolt's last public rates (Nov 2024: boda 350/km, bajaji 550/km) + its 22% May 2026 rise. XL has no LATRA band (priced ~30% above Standard). Operator confirms and edits in the admin. Cancellation fee per ride type applies after the free 2 minutes or once the driver has arrived, and to no-shows. Surge: per busy area, capped per ride type by surge_max (Standard 1.08 = LATRA's top per-km band; others off until the operator sets a cap).",
+  "service": "taxi",
+  "currency": "TZS",
+  "tariffs": {
+    "boda": {
+      "engine": "per_km_min",
+      "params": {
+        "base_fare": 300,
+        "per_km": 430,
+        "per_min": 30,
+        "surge_max": 1.0
+      },
+      "minimum_fare": 1500,
+      "waiting_rate_per_min": 50,
+      "loading_grace_s": 180,
+      "unloading_grace_s": 0,
+      "cancellation_fee": 500
+    },
+    "bajaji": {
+      "engine": "per_km_min",
+      "params": {
+        "base_fare": 600,
+        "per_km": 670,
+        "per_min": 60,
+        "surge_max": 1.0
+      },
+      "minimum_fare": 3000,
+      "waiting_rate_per_min": 80,
+      "loading_grace_s": 180,
+      "unloading_grace_s": 0,
+      "cancellation_fee": 1000
+    },
+    "standard": {
+      "engine": "per_km_min",
+      "params": {
+        "base_fare": 1100,
+        "per_km": 1200,
+        "per_min": 130,
+        "surge_max": 1.08
+      },
+      "minimum_fare": 4000,
+      "waiting_rate_per_min": 130,
+      "loading_grace_s": 180,
+      "unloading_grace_s": 0,
+      "cancellation_fee": 2000
+    },
+    "xl": {
+      "engine": "per_km_min",
+      "params": {
+        "base_fare": 1500,
+        "per_km": 1600,
+        "per_min": 170,
+        "surge_max": 1.0
+      },
+      "minimum_fare": 5500,
+      "waiting_rate_per_min": 170,
+      "loading_grace_s": 180,
+      "unloading_grace_s": 0,
+      "cancellation_fee": 2500
+    }
+  }
+}

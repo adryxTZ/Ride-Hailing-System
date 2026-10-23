@@ -1,0 +1,66 @@
+{
+  "code": "songa",
+  "display_name": "Songa",
+  "legal_entity": "Songa Limited",
+  "country": "TZ",
+  "currency": "TZS",
+  "timezone": "Africa/Dar_es_Salaam",
+  "default_locale": "sw",
+  "locales": [
+    "en",
+    "sw"
+  ],
+  "domains": {
+    "api": "api.songa.co.tz",
+    "web": "songa.co.tz",
+    "deep_link_scheme": "songa"
+  },
+  "apps": {
+    "rider": {
+      "slug": "songa-rider",
+      "android_package": "co.tz.songa.rider",
+      "ios_bundle_id": "co.tz.songa.rider"
+    },
+    "driver": {
+      "slug": "songa-driver",
+      "android_package": "co.tz.songa.driver",
+      "ios_bundle_id": "co.tz.songa.driver"
+    }
+  },
+  "theme_preset": "songa-classic",
+  "providers": {
+    "regulator": "latra",
+    "payment_gateway": "selcom",
+    "sms": "nextsms",
+    "routing": "google",
+    "object_store": "do_spaces"
+  },
+  "services_enabled": [
+    "cargo_hauling"
+  ],
+  "emergency_phone": "112",
+  "countries": [
+    {
+      "code": "TZ",
+      "name": {
+        "en": "Tanzania",
+        "sw": "Tanzania"
+      },
+      "currency": "TZS",
+      "timezone": "Africa/Dar_es_Salaam",
+      "area_term": {
+        "en": "Region",
+        "sw": "Mkoa"
+      },
+      "regulator": "latra",
+      "payment_gateway": "selcom",
+      "emergency_phone": "112",
+      "map": {
+        "lat": -6.7924,
+        "lng": 39.2083,
+        "zoom": 11
+      },
+      "status": "ACTIVE"
+    }
+  ]
+}

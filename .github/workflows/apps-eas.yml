@@ -1,0 +1,55 @@
+# Store and internal builds of the rider and driver apps with EAS (Phase E.1).
+# Manual: Actions > apps-eas > Run workflow (brand, app, profile, platform).
+# Signing keys live in EAS credentials, never in the repository (infra/README.md
+# "Store builds"). Each brand is its own pair of EAS projects; BRAND is also set as an
+# EAS environment variable on those projects so the cloud builder resolves the same brand.
+name: apps-eas
+on:
+  workflow_dispatch:
+    inputs:
+      brand: { type: string, required: true, description: "Brand code (apps/brands/<code>.json)" }
+      app: { type: choice, options: [rider, driver, both], default: both }
+      profile: { type: choice, options: [development, preview, production], default: preview }
+      platform: { type: choice, options: [android, ios, all], default: android }
+      export_assets:
+        type: boolean
+        default: true
+        description: "Refresh icon/splash from the published theme first (tools/brand-assets.mjs)"
+      submit: { type: boolean, default: false, description: "Submit production builds to the stores" }
+permissions: { contents: read }
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults: { run: { working-directory: apps } }
+    env:
+      BRAND: ${{ inputs.brand }}
+      APP_ENV: ${{ inputs.profile == 'production' && 'prod' || 'uat' }}
+      PROFILE: ${{ inputs.profile }}
+      PLATFORM: ${{ inputs.platform }}
+      APPS: ${{ inputs.app == 'both' && 'rider driver' || inputs.app }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Brand code is a known build identity
+        run: |
+          case "$BRAND" in *[!a-z0-9_-]*|"") echo "invalid brand code"; exit 1 ;; esac
+          test -f "brands/$BRAND.json"
+      - uses: pnpm/action-setup@v4
+        with: { version: 10 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm, cache-dependency-path: apps/pnpm-lock.yaml }
+      - run: pnpm install --frozen-lockfile
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: 24.11.0
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Export build assets from the published theme
+        if: inputs.export_assets
+        run: node tools/brand-assets.mjs --brand "$BRAND" --env "$APP_ENV"
+      - name: EAS build
+        run: |
+          extra=()
+          if [ "${{ inputs.submit }}" = "true" ] && [ "$PROFILE" = "production" ]; then extra+=(--auto-submit); fi
+          for app in $APPS; do
+            (cd "$app" && eas build --profile "$PROFILE" --platform "$PLATFORM" --non-interactive --no-wait "${extra[@]}")
+          done

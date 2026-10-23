@@ -1,0 +1,61 @@
+{
+  "key": "parcel",
+  "category": "GOODS",
+  "name": {
+    "en": "Package",
+    "sw": "Kifurushi"
+  },
+  "description": {
+    "en": "Send a package by boda",
+    "sw": "Tuma kifurushi kwa bodaboda"
+  },
+  "status": "ACTIVE",
+  "sort_order": 20,
+  "icon": "package-variant-closed",
+  "lifecycle": {
+    "profile": "pickup_dropoff",
+    "payment_at_end": true,
+    "pickup_grace_s": 300,
+    "arrival_radius_m": 30,
+    "pickup_contact": "when_not_here",
+    "dropoff_contact": "required"
+  },
+  "dispatch": {
+    "batch_s": 3,
+    "offer_s": 12,
+    "radius_km": 5,
+    "min_candidates": 3,
+    "sequential_rounds": 3,
+    "broadcast_size": 2,
+    "window_s": 90,
+    "forward_dispatch_min": 3
+  },
+  "compliance": {
+    "latra": {
+      "submit_trips": false,
+      "vehicle_type_default": "MOTORCYCLE"
+    }
+  },
+  "request_schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "vehicle_classes": [
+    {
+      "key": "boda",
+      "name": {
+        "en": "Boda",
+        "sw": "Bodaboda"
+      },
+      "icon": "motorbike",
+      "sort_order": 0,
+      "seats": 0,
+      "regulator_type": "MOTORCYCLE",
+      "description": {
+        "en": "Small packages, up to a backpack",
+        "sw": "Vifurushi vidogo, hadi mkoba"
+      }
+    }
+  ]
+}

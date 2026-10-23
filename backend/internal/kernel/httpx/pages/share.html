@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Brand}} · Live trip</title>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<style>
+  :root { --primary: {{.Primary}}; --on-primary: {{.OnPrimary}}; --bg: {{.Background}}; --text: {{.Text}}; --muted: {{.Muted}}; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  #map { position: fixed; inset: 0 0 38% 0; }
+  .sheet { position: fixed; left: 0; right: 0; bottom: 0; min-height: 40%; background: var(--bg); border-radius: 20px 20px 0 0;
+           box-shadow: 0 -4px 24px rgba(0,0,0,.08); padding: 20px 16px 28px; }
+  .brand { font-weight: 700; color: var(--primary); margin-bottom: 6px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .muted { color: var(--muted); }
+  .row { display: flex; gap: 10px; align-items: flex-start; margin-top: 12px; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; margin-top: 5px; flex: none; }
+  .vehicle { margin-top: 14px; padding: 12px; border-radius: 14px; background: color-mix(in srgb, var(--primary) 8%, var(--bg)); }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div class="sheet">
+  <div class="brand">{{.Brand}}</div>
+  <h1 id="title">Loading the trip…</h1>
+  <div class="muted" id="sub"></div>
+  <div class="vehicle" id="vehicle" hidden></div>
+  <div class="row"><span class="dot" style="background: var(--primary)"></span><div id="from" class="muted"></div></div>
+  <div class="row"><span class="dot" style="background: var(--text)"></span><div id="to" class="muted"></div></div>
+</div>
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script>
+  const dataURL = {{.DataURL}};
+  const STATUS = {
+    REQUESTED: "Looking for a driver", OFFERED: "Looking for a driver", SCHEDULED: "Ride booked ahead",
+    ACCEPTED: "Driver on the way", EN_ROUTE_TO_PICKUP: "Driver on the way", ARRIVED_AT_PICKUP: "Driver at the pickup",
+    IN_TRANSIT: "On the way", ARRIVED_AT_DROPOFF: "Arrived", AWAITING_PAYMENT: "Arrived", COMPLETED: "Trip completed",
+    CANCELLED_BY_RIDER: "Trip cancelled", CANCELLED_BY_DRIVER: "Trip cancelled", NO_DRIVER_FOUND: "No driver found", EXPIRED: "Trip did not start",
+  };
+  const map = new maplibregl.Map({ container: "map", style: "https://tiles.openfreemap.org/styles/positron", center: [39.21, -6.79], zoom: 12, attributionControl: { compact: true } });
+  const pin = (color) => new maplibregl.Marker({ color });
+  const markers = { pickup: pin(getComputedStyle(document.documentElement).getPropertyValue("--primary").trim()), dropoff: pin("#111"), car: null };
+  let framed = false;
+  async function refresh() {
+    const r = await fetch(dataURL, { cache: "no-store" });
+    if (r.status === 410 || r.status === 404) { document.getElementById("title").textContent = "This link has expired"; return false; }
+    const t = await r.json();
+    const name = t.rider_first_name || "Your contact";
+    document.getElementById("title").textContent = STATUS[t.status] || t.status;
+    document.getElementById("sub").textContent = `${name}'s trip ${t.code}${t.driver_first_name ? " with " + t.driver_first_name : ""}`;
+    const veh = document.getElementById("vehicle");
+    veh.hidden = !t.vehicle; veh.textContent = t.vehicle || "";
+    if (t.pickup) { document.getElementById("from").textContent = t.pickup.address || "Pickup"; markers.pickup.setLngLat([t.pickup.location.lng, t.pickup.location.lat]).addTo(map); }
+    if (t.dropoff) { document.getElementById("to").textContent = t.dropoff.address || "Drop-off"; markers.dropoff.setLngLat([t.dropoff.location.lng, t.dropoff.location.lat]).addTo(map); }
+    if (t.driver_location) {
+      const el = document.createElement("div"); el.textContent = "🚗"; el.style.fontSize = "26px";
+      markers.car = markers.car || new maplibregl.Marker({ element: el });
+      markers.car.setLngLat([t.driver_location.lng, t.driver_location.lat]).addTo(map);
+    }
+    if (!framed && t.pickup) {
+      const pts = [t.pickup, t.dropoff].filter(Boolean).map((p) => [p.location.lng, p.location.lat]);
+      if (t.driver_location) pts.push([t.driver_location.lng, t.driver_location.lat]);
+      const b = pts.reduce((bb, p) => bb.extend(p), new maplibregl.LngLatBounds(pts[0], pts[0]));
+      map.fitBounds(b, { padding: 60, maxZoom: 15, duration: 0 }); framed = true;
+    }
+    return !t.ended;
+  }
+  (async function loop() { if (await refresh().catch(() => true)) setTimeout(loop, 5000); })();
+</script>
+</body>
+</html>

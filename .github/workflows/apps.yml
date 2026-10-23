@@ -1,0 +1,28 @@
+# Mobile checks (rider, driver, shared packages). Self-contained under apps/: own
+# lockfile and own generated API client (committed), so it builds without the backend
+# checked out (ADR 0007). Store builds are separate: apps-eas.yml.
+# Runs on pull requests touching apps/ (or the contract), and from release.yml.
+name: apps
+on:
+  pull_request:
+    paths: ["apps/**", "backend/api/openapi.yaml", ".github/workflows/apps.yml"]
+  workflow_call: {}
+permissions: { contents: read }
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults: { run: { working-directory: apps } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm, cache-dependency-path: apps/pnpm-lock.yaml }
+      - run: pnpm install --frozen-lockfile
+      - name: Typecheck (tsc)
+        run: pnpm typecheck
+      - name: Lint (biome)
+        run: pnpm lint
+      - name: Unit tests (jest)
+        run: pnpm test

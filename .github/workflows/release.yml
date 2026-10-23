@@ -1,0 +1,99 @@
+# Release pipeline (D8, D11 "Delivery"; replaces watchtower, D12 #24/#25):
+#   push to main -> area checks -> images to GHCR -> UAT deploy (migrate, up --wait, smoke)
+#   tag v*       -> area checks -> images to GHCR -> production deploy after approval
+# Images are immutable, tagged by commit sha. Deploys never build on the server.
+# Required configuration: see infra/README.md "CI/CD secrets".
+name: release
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+permissions: { contents: read }
+jobs:
+  backend:
+    uses: ./.github/workflows/backend.yml
+  frontend:
+    uses: ./.github/workflows/frontend.yml
+  apps:
+    uses: ./.github/workflows/apps.yml
+
+  images:
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions: { contents: read, packages: write }
+    outputs:
+      api_image: ${{ steps.names.outputs.api }}
+      admin_prefix: ${{ steps.names.outputs.admin }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: names
+        name: Image names (GHCR requires lowercase)
+        run: |
+          prefix="ghcr.io/${GITHUB_REPOSITORY,,}"
+          {
+            echo "api=$prefix/nexa:${GITHUB_SHA}"
+            echo "admin=$prefix/admin:${GITHUB_SHA}"
+            echo "prefix=$prefix"
+          } >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with: { registry: ghcr.io, username: "${{ github.actor }}", password: "${{ secrets.GITHUB_TOKEN }}" }
+      - name: Backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          push: true
+          build-args: VERSION=${{ github.sha }}
+          tags: |
+            ${{ steps.names.outputs.api }}
+            ${{ steps.names.outputs.prefix }}/nexa:${{ github.ref_type == 'tag' && github.ref_name || 'main' }}
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,scope=backend,mode=max
+      # The admin bakes its API URL into the browser bundle (NEXT_PUBLIC_*), so each
+      # environment gets its own image: admin:<sha>-uat and admin:<sha>-production.
+      - name: Admin image (UAT)
+        uses: docker/build-push-action@v6
+        with:
+          context: frontend
+          file: frontend/admin/Dockerfile
+          push: true
+          build-args: NEXT_PUBLIC_API_URL=${{ vars.UAT_PUBLIC_API_URL }}
+          tags: ${{ steps.names.outputs.admin }}-uat
+          cache-from: type=gha,scope=admin
+          cache-to: type=gha,scope=admin,mode=max
+      - name: Admin image (production)
+        if: github.ref_type == 'tag'
+        uses: docker/build-push-action@v6
+        with:
+          context: frontend
+          file: frontend/admin/Dockerfile
+          push: true
+          build-args: NEXT_PUBLIC_API_URL=${{ vars.PRODUCTION_PUBLIC_API_URL }}
+          tags: ${{ steps.names.outputs.admin }}-production
+          cache-from: type=gha,scope=admin
+
+  deploy-uat:
+    if: github.ref == 'refs/heads/main'
+    needs: images
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: uat
+      api_image: ${{ needs.images.outputs.api_image }}
+      admin_image: ${{ needs.images.outputs.admin_prefix }}-uat
+    secrets: inherit
+
+  # Production: only from a tag, and the "production" GitHub Environment requires a
+  # reviewer's approval before this job starts (Settings > Environments).
+  deploy-production:
+    if: github.ref_type == 'tag'
+    needs: [images, apps]
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: production
+      api_image: ${{ needs.images.outputs.api_image }}
+      admin_image: ${{ needs.images.outputs.admin_prefix }}-production
+    secrets: inherit

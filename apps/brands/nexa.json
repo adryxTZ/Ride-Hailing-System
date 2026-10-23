@@ -1,0 +1,12 @@
+{
+  "code": "nexa",
+  "display_name": "Nexa",
+  "deep_link_scheme": "nexa",
+  "rider":  { "slug": "nexa-rider",  "android_package": "app.nexa.rider",  "ios_bundle_id": "app.nexa.rider" },
+  "driver": { "slug": "nexa-driver", "android_package": "app.nexa.driver", "ios_bundle_id": "app.nexa.driver" },
+  "api_base_url": {
+    "local": "http://localhost:8080/v1",
+    "uat": "https://uat-api.nexa.example/v1",
+    "prod": "https://api.nexa.example/v1"
+  }
+}

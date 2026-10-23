@@ -1,0 +1,99 @@
+# The whole platform on one machine: database, Redis, API, dashboard and the mobile
+# bundlers. Each image builds from its own folder (ADR 0007). Start with infra/up.sh.
+#
+# Host ports are variables so a second copy can run beside the dev stack, e.g.
+#   COMPOSE_PROJECT_NAME=nexa-test API_PORT=18080 ADMIN_PORT=13000 PG_PORT=15433 \
+#   REDIS_PORT=16380 ./infra/up.sh core
+# Local development only: the passwords below are throwaway defaults, never used
+# on a server (servers use infra/deploy/, which has no defaults for secrets).
+name: nexa
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    environment: { POSTGRES_USER: nexa, POSTGRES_PASSWORD: nexa, POSTGRES_DB: nexa }
+    ports: ["${PG_PORT:-5433}:5432"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+    # TCP check: during first init the image runs a socket-only temporary server, which
+    # a socket pg_isready would report as ready before the real server starts.
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U nexa -h 127.0.0.1"], interval: 5s, timeout: 3s, retries: 30 }
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
+    ports: ["${REDIS_PORT:-6380}:6379"]
+    healthcheck: { test: ["CMD", "redis-cli", "ping"], interval: 5s, timeout: 3s, retries: 20 }
+
+  # Applies migrations and loads seed data, then exits; the API waits for it.
+  # migrate, seed and api share one image (built once, tagged below).
+  migrate:
+    build: { context: ../backend }
+    image: ${BACKEND_IMAGE:-nexa-backend:local}
+    environment: &backend-env
+      NEXA_BRAND: ${NEXA_BRAND:-nexa}
+      NEXA_DATABASE_URL: postgres://nexa:nexa@postgres:5432/nexa?sslmode=disable
+      NEXA_REDIS_URL: redis://redis:6379/0
+      NEXA_LOG_LEVEL: ${NEXA_LOG_LEVEL:-info}
+    command: ["migrate"]
+    depends_on: { postgres: { condition: service_healthy } }
+  seed:
+    image: ${BACKEND_IMAGE:-nexa-backend:local}
+    pull_policy: never
+    environment: *backend-env
+    command: ["seed", "all"]
+    depends_on: { migrate: { condition: service_completed_successfully } }
+
+  api:
+    image: ${BACKEND_IMAGE:-nexa-backend:local}
+    pull_policy: never
+    environment:
+      <<: *backend-env
+      NEXA_HTTP_ADDR: 0.0.0.0:8080
+      NEXA_JWT_KEYS_DIR: /keys
+      NEXA_UPLOAD_DIR: /app/data/uploads
+      NEXA_CORS_ORIGINS: "*"
+      NEXA_PAYMENT_GATEWAY: ${NEXA_PAYMENT_GATEWAY:-fake}
+      NEXA_FAKE_GATEWAY_DELAY: 2s
+      # Development sign-in: fixed code for the test numbers. Never set these in production.
+      NEXA_OTP_TEST_CODE: ${NEXA_OTP_TEST_CODE:-0000}
+      NEXA_OTP_TEST_NUMBERS: ${NEXA_OTP_TEST_NUMBERS:-255626512332,255715123702}
+      NEXA_OTP_DEV_ECHO: ${NEXA_OTP_DEV_ECHO:-true}
+    command: ["serve", "--roles=api,realtime,worker,scheduler"]
+    ports: ["${API_PORT:-8080}:8080"]
+    volumes: ["keys:/keys", "uploads:/app/data/uploads"]
+    # distroless has no shell or curl: /app/probe GETs /v1/ready (backend/tools/probe).
+    healthcheck:
+      test: ["CMD", "/app/probe"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    depends_on:
+      seed: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+
+  admin:
+    build:
+      context: ../frontend
+      dockerfile: admin/Dockerfile
+      # Baked into the browser bundle: the API as the browser on this machine sees it.
+      args: { NEXT_PUBLIC_API_URL: "${PUBLIC_API_URL:-http://localhost:8080/v1}" }
+    image: ${ADMIN_IMAGE:-nexa-admin:local}
+    ports: ["${ADMIN_PORT:-3000}:3000"]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/login"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+    depends_on: [api]
+
+  apps:
+    build: { context: ../apps }
+    environment:
+      HOST_IP: ${HOST_IP:-localhost}
+      API_BASE_URL: ${PHONE_API_URL:-http://localhost:8080/v1}
+    ports: ["${APPS_PORTS:-8081-8084}:8081-8084"]
+    depends_on: [api]
+
+volumes:
+  pgdata: {}
+  keys: {}
+  uploads: {}

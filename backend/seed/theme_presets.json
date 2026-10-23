@@ -1,0 +1,506 @@
+{
+ "presets": [
+  {
+   "key": "songa-classic",
+   "name": "Songa classic",
+   "colours": [
+    "#001F54",
+    "#0A3D91",
+    "#00B384",
+    "#F4F6FA"
+   ],
+   "roles": {
+    "primary": "#001F54",
+    "secondary": "#0A3D91",
+    "accent": "#00B384",
+    "background": "#F4F6FA"
+   },
+   "source_url": null,
+   "tags": [
+    "navy",
+    "green"
+   ]
+  },
+  {
+   "key": "nexa-violet",
+   "name": "Nexa violet",
+   "colours": [
+    "#5003C0",
+    "#7A3EF0",
+    "#F1E9FF",
+    "#111318"
+   ],
+   "roles": {
+    "primary": "#5003C0",
+    "secondary": "#3A0290",
+    "accent": "#7A3EF0",
+    "background": "#FFFFFF",
+    "surface": "#F6F2FD",
+    "border": "#E3D9F7",
+    "highlight": "#D9FDD3",
+    "info": "#5003C0"
+   },
+   "source_url": null,
+   "tags": [
+    "violet",
+    "brand",
+    "default"
+   ]
+  },
+  {
+   "key": "midnight-slate",
+   "name": "Midnight Slate",
+   "colours": [
+    "#11212D",
+    "#253745",
+    "#4A5C6A",
+    "#CCD0CF"
+   ],
+   "roles": {
+    "primary": "#253745",
+    "secondary": "#06141B",
+    "accent": "#4A5C6A",
+    "background": "#FFFFFF",
+    "surface": "#F1F3F3",
+    "border": "#CCD0CF",
+    "highlight": "#9BA8AB"
+   },
+   "source_url": null,
+   "tags": [
+    "slate",
+    "dark",
+    "monochrome"
+   ]
+  },
+  {
+   "key": "deep-navy",
+   "name": "Deep Navy",
+   "colours": [
+    "#0B2447",
+    "#19376D",
+    "#576CBC",
+    "#A5D7E8"
+   ],
+   "roles": {
+    "primary": "#0B2447",
+    "secondary": "#19376D",
+    "accent": "#576CBC",
+    "background": "#FFFFFF",
+    "surface": "#F3F6FA",
+    "border": "#DCE3EC",
+    "highlight": "#A5D7E8"
+   },
+   "source_url": "https://colorhunt.co/palette/0b244719376d576cbca5d7e8",
+   "tags": [
+    "navy",
+    "blue",
+    "default"
+   ]
+  },
+  {
+   "key": "classic-navy",
+   "name": "Classic Navy",
+   "colours": [
+    "#112D4E",
+    "#3F72AF",
+    "#DBE2EF",
+    "#F9F7F7"
+   ],
+   "roles": {
+    "primary": "#112D4E",
+    "secondary": "#3F72AF",
+    "accent": "#3F72AF",
+    "background": "#F9F7F7",
+    "surface": "#DBE2EF"
+   },
+   "source_url": "https://colorhunt.co/palette/112d4e3f72afdbe2eff9f7f7",
+   "tags": [
+    "navy",
+    "admin"
+   ]
+  },
+  {
+   "key": "royal-gold",
+   "name": "Royal Blue & Gold",
+   "colours": [
+    "#191D88",
+    "#1450A3",
+    "#337CCF",
+    "#FFC436"
+   ],
+   "roles": {
+    "primary": "#1450A3",
+    "secondary": "#191D88",
+    "accent": "#FFC436",
+    "background": "#FFFFFF",
+    "surface": "#EEF4FB"
+   },
+   "source_url": "https://colorhunt.co/palette/191d881450a3337ccfffc436",
+   "tags": [
+    "blue",
+    "gold",
+    "taxi"
+   ]
+  },
+  {
+   "key": "blue-mustard",
+   "name": "Blue & Mustard",
+   "colours": [
+    "#0C356A",
+    "#0174BE",
+    "#FFC436",
+    "#FFF0CE"
+   ],
+   "roles": {
+    "primary": "#0C356A",
+    "secondary": "#0174BE",
+    "accent": "#FFC436",
+    "background": "#FFF0CE",
+    "surface": "#FFFFFF"
+   },
+   "source_url": "https://colorhunt.co/palette/0c356a0174beffc436fff0ce",
+   "tags": [
+    "blue",
+    "warm"
+   ]
+  },
+  {
+   "key": "ocean-teal",
+   "name": "Ocean Teal",
+   "colours": [
+    "#071952",
+    "#0B666A",
+    "#35A29F",
+    "#97FEED"
+   ],
+   "roles": {
+    "primary": "#071952",
+    "secondary": "#0B666A",
+    "accent": "#35A29F",
+    "background": "#FFFFFF",
+    "surface": "#E8FDF8"
+   },
+   "source_url": "https://colorhunt.co/palette/0719520b666a35a29f97feed",
+   "tags": [
+    "teal",
+    "water"
+   ]
+  },
+  {
+   "key": "harbor-blue",
+   "name": "Harbor Blue",
+   "colours": [
+    "#164863",
+    "#427D9D",
+    "#9BBEC8",
+    "#DDF2FD"
+   ],
+   "roles": {
+    "primary": "#164863",
+    "secondary": "#427D9D",
+    "accent": "#427D9D",
+    "background": "#DDF2FD",
+    "surface": "#FFFFFF"
+   },
+   "source_url": "https://colorhunt.co/palette/164863427d9d9bbec8ddf2fd",
+   "tags": [
+    "blue",
+    "light"
+   ]
+  },
+  {
+   "key": "steel-blue",
+   "name": "Steel Blue",
+   "colours": [
+    "#27374D",
+    "#526D82",
+    "#9DB2BF",
+    "#DDE6ED"
+   ],
+   "roles": {
+    "primary": "#27374D",
+    "secondary": "#526D82",
+    "accent": "#526D82",
+    "background": "#DDE6ED",
+    "surface": "#FFFFFF"
+   },
+   "source_url": "https://colorhunt.co/palette/27374d526d829db2bfdde6ed",
+   "tags": [
+    "slate",
+    "admin"
+   ]
+  },
+  {
+   "key": "marine-coral",
+   "name": "Marine & Coral",
+   "colours": [
+    "#3D5A80",
+    "#98C1D9",
+    "#E0FBFC",
+    "#EE6C4D"
+   ],
+   "roles": {
+    "primary": "#3D5A80",
+    "secondary": "#98C1D9",
+    "accent": "#EE6C4D",
+    "background": "#E0FBFC",
+    "surface": "#FFFFFF"
+   },
+   "source_url": "https://colorhunt.co/palette/3d5a8098c1d9e0fbfcee6c4d",
+   "tags": [
+    "blue",
+    "coral",
+    "recovery"
+   ]
+  },
+  {
+   "key": "slate-teal",
+   "name": "Slate & Teal",
+   "colours": [
+    "#222831",
+    "#393E46",
+    "#00ADB5",
+    "#EEEEEE"
+   ],
+   "roles": {
+    "primary": "#222831",
+    "secondary": "#393E46",
+    "accent": "#00ADB5",
+    "background": "#EEEEEE",
+    "surface": "#FFFFFF"
+   },
+   "source_url": "https://colorhunt.co/palette/222831393e4600adb5eeeeee",
+   "tags": [
+    "dark",
+    "teal",
+    "driver"
+   ]
+  },
+  {
+   "key": "dark-teal",
+   "name": "Dark Teal",
+   "colours": [
+    "#2C3333",
+    "#2E4F4F",
+    "#0E8388",
+    "#CBE4DE"
+   ],
+   "roles": {
+    "primary": "#2E4F4F",
+    "secondary": "#2C3333",
+    "accent": "#0E8388",
+    "background": "#CBE4DE",
+    "surface": "#FFFFFF"
+   },
+   "source_url": "https://colorhunt.co/palette/2c33332e4f4f0e8388cbe4de",
+   "tags": [
+    "dark",
+    "teal"
+   ]
+  },
+  {
+   "key": "night-green",
+   "name": "Night Green",
+   "colours": [
+    "#0F0F0F",
+    "#232D3F",
+    "#005B41",
+    "#008170"
+   ],
+   "roles": {
+    "primary": "#005B41",
+    "secondary": "#232D3F",
+    "accent": "#008170",
+    "background": "#0F0F0F",
+    "surface": "#232D3F",
+    "text": "#F2F4F7"
+   },
+   "source_url": "https://colorhunt.co/palette/0f0f0f232d3f005b41008170",
+   "tags": [
+    "dark",
+    "green"
+   ]
+  },
+  {
+   "key": "deep-indigo",
+   "name": "Deep Indigo",
+   "colours": [
+    "#070F2B",
+    "#1B1A55",
+    "#535C91",
+    "#9290C3"
+   ],
+   "roles": {
+    "primary": "#1B1A55",
+    "secondary": "#070F2B",
+    "accent": "#9290C3",
+    "background": "#FFFFFF",
+    "surface": "#EFEFF8"
+   },
+   "source_url": "https://colorhunt.co/palette/070f2b1b1a55535c919290c3",
+   "tags": [
+    "indigo",
+    "night"
+   ]
+  },
+  {
+   "key": "midnight-coral",
+   "name": "Midnight & Coral",
+   "colours": [
+    "#1A1A2E",
+    "#16213E",
+    "#0F3460",
+    "#E94560"
+   ],
+   "roles": {
+    "primary": "#0F3460",
+    "secondary": "#16213E",
+    "accent": "#E94560",
+    "background": "#FFFFFF",
+    "surface": "#F1F3F8"
+   },
+   "source_url": "https://colorhunt.co/palette/1a1a2e16213e0f3460e94560",
+   "tags": [
+    "dark",
+    "coral"
+   ]
+  },
+  {
+   "key": "indigo-apricot",
+   "name": "Indigo & Apricot",
+   "colours": [
+    "#2D3250",
+    "#424769",
+    "#7077A1",
+    "#F6B17A"
+   ],
+   "roles": {
+    "primary": "#2D3250",
+    "secondary": "#424769",
+    "accent": "#F6B17A",
+    "background": "#FFFFFF",
+    "surface": "#F3F4F9"
+   },
+   "source_url": "https://colorhunt.co/palette/2d32504247697077a1f6b17a",
+   "tags": [
+    "indigo",
+    "warm"
+   ]
+  },
+  {
+   "key": "navy-sunset",
+   "name": "Navy & Sunset",
+   "colours": [
+    "#2D4059",
+    "#EA5455",
+    "#F07B3F",
+    "#FFD460"
+   ],
+   "roles": {
+    "primary": "#2D4059",
+    "secondary": "#3C5273",
+    "accent": "#F07B3F",
+    "background": "#FFFFFF",
+    "surface": "#F6F7FA",
+    "danger": "#EA5455",
+    "warning": "#FFD460"
+   },
+   "source_url": "https://colorhunt.co/palette/2d4059ea5455f07b3fffd460",
+   "tags": [
+    "navy",
+    "sunset"
+   ]
+  },
+  {
+   "key": "teal-sunrise",
+   "name": "Teal & Sunrise",
+   "colours": [
+    "#1D5B79",
+    "#468B97",
+    "#EF6262",
+    "#F3AA60"
+   ],
+   "roles": {
+    "primary": "#1D5B79",
+    "secondary": "#468B97",
+    "accent": "#F3AA60",
+    "background": "#FFFFFF",
+    "surface": "#EEF6F8",
+    "danger": "#EF6262"
+   },
+   "source_url": "https://colorhunt.co/palette/1d5b79468b97ef6262f3aa60",
+   "tags": [
+    "teal",
+    "orange"
+   ]
+  },
+  {
+   "key": "safety-orange",
+   "name": "Safety Orange",
+   "colours": [
+    "#FF6000",
+    "#FFA559",
+    "#FFE6C7",
+    "#454545"
+   ],
+   "roles": {
+    "primary": "#454545",
+    "secondary": "#FFA559",
+    "accent": "#FF6000",
+    "background": "#FFE6C7",
+    "surface": "#FFFFFF"
+   },
+   "source_url": "https://colorhunt.co/palette/ff6000ffa559ffe6c7454545",
+   "tags": [
+    "orange",
+    "hauling",
+    "driver"
+   ]
+  },
+  {
+   "key": "forest-sand",
+   "name": "Forest & Sand",
+   "colours": [
+    "#3A4D39",
+    "#4F6F52",
+    "#739072",
+    "#ECE3CE"
+   ],
+   "roles": {
+    "primary": "#3A4D39",
+    "secondary": "#4F6F52",
+    "accent": "#739072",
+    "background": "#ECE3CE",
+    "surface": "#FFFFFF"
+   },
+   "source_url": "https://colorhunt.co/palette/3a4d394f6f52739072ece3ce",
+   "tags": [
+    "green",
+    "eco",
+    "water"
+   ]
+  },
+  {
+   "key": "racing-green",
+   "name": "Racing Green & Gold",
+   "colours": [
+    "#004225",
+    "#F5F5DC",
+    "#FFB000",
+    "#FFCF9D"
+   ],
+   "roles": {
+    "primary": "#004225",
+    "secondary": "#1E5C3F",
+    "accent": "#FFB000",
+    "background": "#F5F5DC",
+    "surface": "#FFCF9D"
+   },
+   "source_url": "https://colorhunt.co/palette/004225f5f5dcffb000ffcf9d",
+   "tags": [
+    "green",
+    "gold"
+   ]
+  }
+ ]
+}

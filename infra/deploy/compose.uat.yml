@@ -1,0 +1,11 @@
+# UAT overlay: a smaller droplet (2 GB), its own managed database, test sign-in
+# allowed for the QA numbers listed in api.env. Separate host from production (D12 #24).
+#   docker compose -f compose.yml -f compose.uat.yml ...
+services:
+  api:
+    deploy: { resources: { limits: { cpus: "1.0", memory: 384M } } }
+  admin:
+    deploy: { resources: { limits: { cpus: "0.25", memory: 192M } } }
+  redis:
+    command: ["redis-server", "--maxmemory", "96mb", "--maxmemory-policy", "allkeys-lru", "--save", "", "--appendonly", "no"]
+    deploy: { resources: { limits: { memory: 128M } } }

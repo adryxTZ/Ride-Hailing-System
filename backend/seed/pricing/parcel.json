@@ -1,0 +1,20 @@
+{
+  "_note": "Boda package delivery, priced like a Boda ride (LATRA motorcycle band: up to 1 km 1,500-2,000) with a 2,000 minimum; operator confirms in the admin. Free waiting at pickup 5 minutes. Cancellation fee per ride type applies after the free 2 minutes or once the driver has arrived, and to no-shows.",
+  "service": "parcel",
+  "currency": "TZS",
+  "tariffs": {
+    "boda": {
+      "engine": "per_km_min",
+      "params": {
+        "base_fare": 500,
+        "per_km": 450,
+        "per_min": 30
+      },
+      "minimum_fare": 2000,
+      "waiting_rate_per_min": 50,
+      "loading_grace_s": 300,
+      "unloading_grace_s": 0,
+      "cancellation_fee": 500
+    }
+  }
+}

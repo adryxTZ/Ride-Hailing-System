@@ -1,0 +1,23 @@
+{
+  "name": "@platform/chat",
+  "version": "0.1.0",
+  "private": true,
+  "description": "In-trip chat and after-trip rating UI shared by the rider and driver apps. Presentational; each app supplies data.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "react": "*",
+    "react-native": "*",
+    "react-native-reanimated": "*"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.0",
+    "typescript": "^5.9.0"
+  },
+  "dependencies": {
+    "@platform/ui": "workspace:*"
+  }
+}

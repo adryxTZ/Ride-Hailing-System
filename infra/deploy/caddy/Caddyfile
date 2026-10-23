@@ -1,0 +1,48 @@
+# TLS edge for one environment. Domains come from the environment (compose passes
+# API_DOMAIN, ADMIN_DOMAIN, ACME_EMAIL), so this file names no brand.
+# Certificates are issued and renewed automatically (Let's Encrypt, HTTP-01/TLS-ALPN).
+{
+	email {$ACME_EMAIL}
+	# Request metrics (latency histogram, status codes) per host, for alerts on
+	# API p95 and 5xx rate. Served on the internal :9180 listener below only.
+	metrics {
+		per_host
+	}
+}
+
+# Shared response hardening for both sites.
+(security_headers) {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+}
+
+{$API_DOMAIN} {
+	import security_headers
+	encode zstd gzip
+	# /v1/ws is upgraded to a websocket transparently by reverse_proxy.
+	reverse_proxy api:8080 {
+		health_uri /v1/ready
+		health_interval 10s
+		# Keep long-lived websocket streams through upstream reloads.
+		stream_close_delay 5m
+	}
+	log {
+		output stdout
+		format json
+	}
+}
+
+{$ADMIN_DOMAIN} {
+	import security_headers
+	encode zstd gzip
+	reverse_proxy admin:3000
+}
+
+# Internal metrics listener: reachable only on the compose network (not published).
+:9180 {
+	metrics /metrics
+}

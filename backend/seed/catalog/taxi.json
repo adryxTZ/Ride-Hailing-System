@@ -1,0 +1,106 @@
+{
+  "key": "taxi",
+  "category": "PASSENGER",
+  "name": {
+    "en": "Taxi",
+    "sw": "Teksi"
+  },
+  "description": {
+    "en": "Rides across the city",
+    "sw": "Safari ndani ya jiji"
+  },
+  "status": "ACTIVE",
+  "sort_order": 10,
+  "icon": "taxi",
+  "lifecycle": {
+    "profile": "pickup_dropoff",
+    "payment_at_end": true,
+    "pickup_wait_clock": true,
+    "pickup_grace_s": 180,
+    "arrival_radius_m": 30,
+    "pickup_contact": "when_not_here"
+  },
+  "dispatch": {
+    "batch_s": 3,
+    "offer_s": 12,
+    "radius_km": 5,
+    "min_candidates": 3,
+    "sequential_rounds": 3,
+    "broadcast_size": 2,
+    "window_s": 90,
+    "forward_dispatch_min": 3
+  },
+  "compliance": {
+    "latra": {
+      "submit_trips": true,
+      "vehicle_type_default": "CAR"
+    }
+  },
+  "request_schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "vehicle_classes": [
+    {
+      "key": "boda",
+      "name": {
+        "en": "Boda",
+        "sw": "Bodaboda"
+      },
+      "icon": "motorbike",
+      "sort_order": 0,
+      "seats": 1,
+      "regulator_type": "MOTORCYCLE",
+      "description": {
+        "en": "Fast, beats traffic",
+        "sw": "Haraka, inapita foleni"
+      }
+    },
+    {
+      "key": "bajaji",
+      "name": {
+        "en": "Bajaji",
+        "sw": "Bajaji"
+      },
+      "icon": "rickshaw",
+      "sort_order": 1,
+      "seats": 3,
+      "regulator_type": "TRICYCLE",
+      "description": {
+        "en": "3-wheel rides",
+        "sw": "Safari za magurudumu 3"
+      }
+    },
+    {
+      "key": "standard",
+      "name": {
+        "en": "Standard",
+        "sw": "Kawaida"
+      },
+      "icon": "car",
+      "sort_order": 2,
+      "seats": 4,
+      "regulator_type": "CAR",
+      "description": {
+        "en": "Let's get moving",
+        "sw": "Tuanze safari"
+      }
+    },
+    {
+      "key": "xl",
+      "name": {
+        "en": "XL",
+        "sw": "Kubwa"
+      },
+      "icon": "car-estate",
+      "sort_order": 3,
+      "seats": 6,
+      "regulator_type": "CAR",
+      "description": {
+        "en": "Seating for 6",
+        "sw": "Viti 6"
+      }
+    }
+  ]
+}

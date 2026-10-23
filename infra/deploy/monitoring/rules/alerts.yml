@@ -1,0 +1,114 @@
+# Alert rules for the Platform (Prometheus rule format). Load into the Grafana Cloud
+# ruler (mimirtool rules load rules/alerts.yml) or any Prometheus. Series come from
+# monitoring/config.alloy; every series carries env=uat|production.
+# Thresholds match the definition of done in CLAUDE.md (p95 < 150 ms) and D11.
+groups:
+  - name: platform-api
+    rules:
+      - alert: ApiLatencyP95High
+        # Websocket upgrades are long-lived by design and excluded.
+        expr: |
+          histogram_quantile(0.95,
+            sum by (env, le) (rate(caddy_http_request_duration_seconds_bucket{service="api", code!="101"}[5m]))
+          ) > 0.15
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "API p95 above 150 ms ({{ $labels.env }})"
+          description: "p95 is {{ $value | humanizeDuration }} over 10 minutes. Check slow endpoints in the API logs (ms field) and EXPLAIN ANALYZE."
+      - alert: ApiLatencyP95Critical
+        expr: |
+          histogram_quantile(0.95,
+            sum by (env, le) (rate(caddy_http_request_duration_seconds_bucket{service="api", code!="101"}[5m]))
+          ) > 0.5
+        for: 5m
+        labels: { severity: critical }
+        annotations:
+          summary: "API p95 above 500 ms ({{ $labels.env }})"
+      - alert: Api5xxRateHigh
+        expr: |
+          sum by (env) (rate(caddy_http_request_duration_seconds_count{service="api", code=~"5.."}[5m]))
+            /
+          sum by (env) (rate(caddy_http_request_duration_seconds_count{service="api"}[5m])) > 0.01
+        for: 5m
+        labels: { severity: critical }
+        annotations:
+          summary: "API 5xx rate above 1 % ({{ $labels.env }})"
+          description: "{{ $value | humanizePercentage }} of API requests fail with 5xx."
+      - alert: ApiNoTraffic
+        # Caddy sees no API requests at all: the API, DNS or TLS is down.
+        expr: sum by (env) (rate(caddy_http_request_duration_seconds_count{service="api"}[10m])) == 0
+        for: 10m
+        labels: { severity: critical }
+        annotations:
+          summary: "No API requests for 10 minutes ({{ $labels.env }})"
+
+  - name: platform-jobs
+    rules:
+      - alert: RiverQueueBacklog
+        expr: sum by (env, queue) (pg_river_queue_jobs{state=~"available|retryable"}) > 500
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "River queue {{ $labels.queue }} has {{ $value }} jobs waiting ({{ $labels.env }})"
+      - alert: RiverJobsStuck
+        expr: max by (env) (pg_river_oldest_available_seconds) > 300
+        for: 5m
+        labels: { severity: critical }
+        annotations:
+          summary: "Oldest River job has waited over 5 minutes ({{ $labels.env }}): workers stuck or down"
+      - alert: RiverJobsDiscarded
+        # Payments, payouts and regulator submissions that gave up need a human.
+        expr: sum by (env, kind) (pg_river_discarded_recent_jobs) > 0
+        labels: { severity: warning }
+        annotations:
+          summary: "River jobs of kind {{ $labels.kind }} discarded in the last hour ({{ $labels.env }})"
+
+  - name: platform-money
+    rules:
+      - alert: LedgerVerifyFailed
+        expr: platform_ledger_verify_ok == 0
+        labels: { severity: critical }
+        annotations:
+          summary: "Ledger hash chain verification FAILED ({{ $labels.env }})"
+          description: "Run `nexa verify-ledger` to find the broken entry; pause payouts until resolved."
+      - alert: LedgerVerifyStale
+        expr: time() - platform_ledger_verify_last_run_timestamp_seconds > 26 * 3600
+        labels: { severity: warning }
+        annotations:
+          summary: "Ledger verification has not run for over 26 hours ({{ $labels.env }})"
+
+  - name: platform-host
+    rules:
+      - alert: DiskSpaceLow
+        expr: |
+          node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs", mountpoint="/"}
+            / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs", mountpoint="/"} < 0.15
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "Root disk below 15 % free ({{ $labels.env }})"
+      - alert: DiskSpaceCritical
+        expr: |
+          node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs", mountpoint="/"}
+            / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs", mountpoint="/"} < 0.05
+        for: 5m
+        labels: { severity: critical }
+        annotations:
+          summary: "Root disk below 5 % free ({{ $labels.env }})"
+      - alert: MemoryPressure
+        expr: node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes < 0.10
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "Host memory below 10 % available ({{ $labels.env }})"
+      - alert: BackupFailed
+        expr: platform_backup_ok == 0
+        labels: { severity: critical }
+        annotations:
+          summary: "Last database backup failed ({{ $labels.env }})"
+      - alert: BackupStale
+        expr: time() - platform_backup_last_run_timestamp_seconds > 26 * 3600
+        labels: { severity: warning }
+        annotations:
+          summary: "No database backup for over 26 hours ({{ $labels.env }})"

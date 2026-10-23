@@ -1,0 +1,8 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "tasks": {
+    "typecheck": { "dependsOn": ["^gen"] },
+    "test": { "dependsOn": ["^gen"] },
+    "gen": { "inputs": ["../../../backend/api/openapi.yaml"], "outputs": ["src/generated/**"] }
+  }
+}

@@ -1,0 +1,16 @@
+import { chromium } from "playwright";
+const out = process.env.OUT;
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport: { width: 412, height: 915 }, deviceScaleFactor: 2 });
+const errors = [];
+page.on("console", (m) => { if (m.type() === "error") errors.push(m.text().slice(0, 160)); });
+await page.goto("http://localhost:8083/", { waitUntil: "networkidle", timeout: 240000 });
+await page.getByPlaceholder("07XX XXX XXX").fill("255626512332");
+await page.getByText("Send code", { exact: true }).click();
+await page.getByText("Verify", { exact: true }).click();
+await page.getByText("Where to?", { exact: true }).waitFor({ timeout: 20000 });
+await page.waitForTimeout(1500);
+await page.screenshot({ path: `${out}/home-viewport.png` });
+const tabs = await page.getByRole("tab").count();
+console.log("tabs rendered:", tabs, "| console errors:", errors.length ? errors : "none");
+await browser.close();

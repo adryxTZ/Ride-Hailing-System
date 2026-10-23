@@ -1,0 +1,32 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
+  "formatter": {
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 110
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "none"
+    }
+  },
+  "files": {
+    "includes": [
+      "admin/**",
+      "website/**",
+      "packages/**",
+      "!**/generated",
+      "!**/node_modules",
+      "!**/.next",
+      "!**/.expo",
+      "!**/expo-env.d.ts",
+      "!**/dist"
+    ]
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
+  }
+}

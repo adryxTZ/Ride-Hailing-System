@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Songa Doc 3 — Platform Analysis &amp; Proposal</title>
+<style>
+  @page { size: A4; margin: 14mm 13mm 13mm 13mm; }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body {
+    margin: 0; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: #16181d; font-size: 8.6pt; line-height: 1.42;
+  }
+  .page { page-break-after: always; position: relative; }
+  .page:last-child { page-break-after: auto; }
+
+  /* ---------- cover ---------- */
+  .cover { background: #11131a; color: #fff; margin: -14mm -13mm 0 -13mm;
+           padding: 24mm 16mm 16mm 16mm; min-height: 268mm; }
+  .brandline { display:flex; align-items:center; gap:8px; margin-bottom: 34mm; }
+  .mark { width:16px;height:16px;border-radius:50%;background:#f5a623;display:inline-block; }
+  .brand { font-weight:700; letter-spacing:.14em; font-size:10pt; }
+  .kicker { color:#f5a623; letter-spacing:.2em; font-size:7pt; font-weight:700;
+            text-transform:uppercase; margin-bottom:9mm; }
+  h1.cover-title { font-size:31pt; line-height:1.08; font-weight:700; margin:0 0 7mm 0; letter-spacing:-.6px; }
+  .cover-sub { font-size:10pt; line-height:1.5; color:#c6cad4; max-width:150mm; margin-bottom:16mm; }
+  .metagrid { display:grid; grid-template-columns:repeat(4,1fr); gap:6mm; border-top:1px solid #2c313d;
+              padding-top:6mm; margin-bottom:9mm; }
+  .metagrid .lbl { color:#7d8494; font-size:6.6pt; letter-spacing:.13em; text-transform:uppercase; margin-bottom:2mm; }
+  .metagrid .val { font-size:8.4pt; color:#eef0f4; font-weight:600; }
+  .cover-note { border-left:2px solid #f5a623; padding-left:5mm; color:#aeb4c0; font-size:7.6pt; line-height:1.55; max-width:158mm; }
+
+  /* ---------- headers ---------- */
+  .phead { display:flex; justify-content:space-between; align-items:baseline;
+           border-bottom:1.6px solid #11131a; padding-bottom:2.4mm; margin-bottom:5mm; }
+  .phead h2 { font-size:15.5pt; margin:0; font-weight:700; letter-spacing:-.3px; }
+  .phead .tag { font-size:6.4pt; letter-spacing:.15em; color:#8a90a0; font-weight:700; text-transform:uppercase; }
+  h3 { font-size:9.6pt; margin:5.5mm 0 2.2mm 0; font-weight:700; }
+  h3 .num { color:#f5a623; margin-right:2mm; }
+  h4 { font-size:8.2pt; margin:4mm 0 1.6mm 0; font-weight:700; color:#33384a; }
+  p { margin:0 0 2.4mm 0; }
+  .lede { font-size:9pt; color:#3b4050; line-height:1.5; margin-bottom:4mm; }
+  ul { margin:0 0 2.6mm 0; padding-left:4.6mm; }
+  li { margin-bottom:1.3mm; }
+  code, .mono { font-family:"SF Mono",Menlo,Consolas,monospace; font-size:7.4pt;
+                background:#f2f3f6; padding:.4mm 1mm; border-radius:2px; color:#2b3040; }
+
+  /* ---------- tables ---------- */
+  table { width:100%; border-collapse:collapse; margin:2.5mm 0 3.5mm 0; font-size:7.5pt; }
+  th { background:#11131a; color:#fff; text-align:left; padding:2mm 2.2mm; font-size:6.5pt;
+       letter-spacing:.1em; text-transform:uppercase; font-weight:700; }
+  td { padding:2mm 2.2mm; border-bottom:.5px solid #dfe2e9; vertical-align:top; }
+  tbody tr:nth-child(even) { background:#f8f9fb; }
+  td.num, th.num { width:7mm; text-align:center; }
+  tr, .callout, .split { page-break-inside: avoid; }
+
+  /* ---------- pills & callouts ---------- */
+  .pill { display:inline-block; padding:.5mm 1.8mm; border-radius:2.5px; font-size:6.2pt;
+          font-weight:700; letter-spacing:.06em; text-transform:uppercase; white-space:nowrap; }
+  .ok   { background:#dcf3e4; color:#1c6b39; }
+  .bad  { background:#fbe0e0; color:#9c2020; }
+  .warn { background:#fdeccc; color:#8a5a05; }
+  .info { background:#dde7fb; color:#1d468f; }
+  .neu  { background:#e6e8ee; color:#454b5c; }
+
+  .callout { border-left:2.5px solid #f5a623; background:#fffaf0; padding:3mm 3.5mm;
+             margin:3mm 0; font-size:7.8pt; line-height:1.48; }
+  .callout.red { border-left-color:#c0392b; background:#fdf3f2; }
+  .callout.blue { border-left-color:#2c5fd4; background:#f2f6fd; }
+  .callout .ct { font-weight:700; display:block; margin-bottom:1.2mm; font-size:7.6pt; }
+
+  /* ---------- stat strip ---------- */
+  .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:3mm; margin:3.5mm 0; }
+  .stat { border:.6px solid #d9dce4; border-top:2.2px solid #11131a; padding:2.6mm 2.8mm; }
+  .stat .sl { font-size:6.2pt; letter-spacing:.11em; text-transform:uppercase; color:#7d8494; margin-bottom:1.4mm; font-weight:700; }
+  .stat .sv { font-size:15pt; font-weight:700; line-height:1; margin-bottom:1.4mm; letter-spacing:-.5px; }
+  .stat .sd { font-size:6.9pt; color:#565c6e; line-height:1.35; }
+  .stat.amber { border-top-color:#f5a623; } .stat.amber .sv { color:#b8760a; }
+  .stat.red   { border-top-color:#c0392b; } .stat.red .sv { color:#a3271b; }
+
+  /* ---------- two-col split ---------- */
+  .split { display:grid; grid-template-columns:1fr 1fr; gap:4mm; margin:3mm 0; }
+  .panel { border:.6px solid #d9dce4; padding:2.8mm 3mm; }
+  .panel h5 { margin:0 0 2mm 0; font-size:6.6pt; letter-spacing:.11em; text-transform:uppercase; font-weight:700; }
+  .panel.keep h5 { color:#1c6b39; } .panel.fix h5 { color:#9c2020; }
+  .panel ul { padding-left:3.6mm; margin:0; } .panel li { font-size:7.3pt; margin-bottom:1.2mm; }
+
+  .foot { position:absolute; bottom:-7mm; left:0; right:0; border-top:.5px solid #dfe2e9;
+          padding-top:1.6mm; font-size:6.2pt; color:#9aa0ae; display:flex; justify-content:space-between; }
+  .src { font-size:6.7pt; color:#787f90; font-style:italic; margin-top:1.4mm; }
+</style>
+</head>
+<body>
+
+<!-- ============ COVER ============ -->
+<div class="page">
+  <div class="cover">
+    <div class="brandline"><span class="mark"></span><span class="brand">SONGA</span></div>
+    <div class="kicker">Internal · Product &amp; Engineering Strategy</div>
+    <h1 class="cover-title">What We Built,<br>What Others Built,<br>What to Build Next</h1>
+    <div class="cover-sub">
+      A code-verified audit of the Songa platform, a researched comparison against how cargo
+      and freight marketplaces actually operate elsewhere, and a proposal for what to add —
+      including three corrections to Documents 1 and 2.
+    </div>
+    <div class="metagrid">
+      <div><div class="lbl">Document</div><div class="val">3 of 3 — Analysis</div></div>
+      <div><div class="lbl">Prepared</div><div class="val">3 August 2026</div></div>
+      <div><div class="lbl">Market</div><div class="val">Tanzania · East Africa</div></div>
+      <div><div class="lbl">Basis</div><div class="val">Code audit + external research</div></div>
+    </div>
+    <div class="cover-note">
+      Companion to <strong>“Five Revenue Lines on One Codebase”</strong> (Doc 1) and
+      <strong>“Tracking &amp; Security, as a Business”</strong> (Doc 2), both dated 20 July 2026.
+      Every claim about our own platform is traced to a file path and was re-verified against the
+      current tree. Every external claim carries its source and survived adversarial verification;
+      where the evidence is thin, this document says so rather than filling the gap with plausible prose.
+    </div>
+  </div>
+</div>
+
+<!-- ============ P2 — EXEC SUMMARY ============ -->
+<div class="page">
+  <div class="phead"><h2>Executive Summary</h2><span class="tag">Doc 3 · Analysis</span></div>
+
+  <p class="lede">
+    Docs 1 and 2 argued that Songa's engine is strong enough to extend into five revenue lines and a
+    standalone tracking business. That thesis holds — the audit confirms the expensive parts are real.
+    But the audit also found the two documents describe an engine that differs from the one actually
+    running, and the external research surfaced a failure mode that neither document addresses and that
+    acts directly against Doc 1's growth sequence.
+  </p>
+
+  <div class="stats">
+    <div class="stat"><div class="sl">Thesis</div><div class="sv">Holds</div>
+      <div class="sd">Redis/H3 dispatch, full cargo lifecycle, hash-chained ledger, LATRA reporting all verified in code</div></div>
+    <div class="stat red"><div class="sl">Corrections</div><div class="sv">3</div>
+      <div class="sd">Doc 1 misstates the lifecycle, cites dead code, and understates what already ships</div></div>
+    <div class="stat amber"><div class="sl">Missing line</div><div class="sv">#0</div>
+      <div class="sd">Driver retention &amp; anti-leakage — the strongest-evidenced risk, absent from both docs</div></div>
+    <div class="stat"><div class="sl">Defects found</div><div class="sv">6</div>
+      <div class="sd">Code-verified, including two fraud detectors that can never fire</div></div>
+  </div>
+
+  <h3><span class="num">01</span>The engine is real, but not the one Doc 1 describes</h3>
+  <p>
+    Songa is a production intra-city cargo-trucking marketplace: pure-Redis H3 candidate selection,
+    a load→transit→unload lifecycle, a tamper-evident double-entry ledger, and a live regulator
+    integration. Doc 1's “~80% reusable” framing is defensible. However three of its specific claims
+    are wrong in ways that change engineering decisions — the trip lifecycle diagram describes states
+    the code never assigns, the “tunable dispatch waves” capability points at a dead module and at
+    wave delays that are computed and then discarded, and the payment gateway is described as
+    placeholder-only when a full Selcom integration ships. Section 2 documents all three.
+  </p>
+
+  <h3><span class="num">02</span>Peers monetize drivers differently — and our model is the risky one</h3>
+  <p>
+    The best-evidenced finding in the external research is that driver commission causes
+    disintermediation. On a large Asian cargo platform, introducing a 15% commission
+    <strong>roughly doubled measured off-platform leakage (3.92% → 7.87%)</strong> while drivers whose
+    fees were waived showed no change; two-thirds of a 1,971-driver sample did at least one off-app job
+    in 137 days. Peers therefore run a <strong>two-part tariff</strong> — a paid subscription tier that
+    waives commission, with commission applied only to the free tier.
+  </p>
+  <p>
+    Songa charges a flat 10% to every driver and has <code>DriverLevel</code> tiers 1–10 that are
+    commented “Level Index Subscription Advantage” in the matching code but carry
+    <strong>no fee, no billing, no expiry and no promotion logic</strong>. We built the skeleton of the
+    peer model, monetized none of it, and kept the part the evidence says drives drivers off-platform.
+  </p>
+
+  <h3><span class="num">03</span>Sequencing implication for Doc 1</h3>
+  <p>
+    Doc 1's order — Scheduling, then Fleet, then Corporate — is sound on effort grounds and this
+    document does not overturn it. Two adjustments follow from the findings: the cross-cutting
+    “platform track” is <em>cheaper</em> than Doc 1 assumed because the payment gateway is already built,
+    and <strong>supply retention should precede supply scaling</strong>, because leakage compounds against
+    every additional truck the fleet-owner line brings on.
+  </p>
+
+  <div class="callout blue">
+    <span class="ct">How to read this document</span>
+    Section 1 is what we have (code-verified). Section 2 is where Docs 1–2 need correcting.
+    Section 3 is what others do (with explicit evidence quality). Section 4 is the proposal.
+    Section 5 is the merged roadmap. Where research came back empty — notably African platforms and
+    cargo trip-lifecycle norms — that is stated as a gap, not filled with inference.
+  </div>
+
+  <div class="foot"><span>Songa · Internal Strategy · Doc 3 of 3</span><span>2</span></div>
+</div>
+
+<!-- ============ P3 — SECTION 1 ============ -->
+<div class="page">
+  <div class="phead"><h2>1 · Where Songa Actually Stands</h2><span class="tag">Code-verified audit</span></div>
+
+  <p class="lede">
+    Every row below was read out of the current tree. This is the baseline against which both the
+    existing proposals and the external comparison are measured.
+  </p>
+
+  <table>
+    <thead><tr><th style="width:26%">Dimension</th><th>Implementation as it runs today</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Business</strong></td><td>Intra-city cargo/truck hailing, Tanzania. Fleet is Kirikuu / Tipper / Tanker / Towing; vehicle sizes 350&nbsp;kg – 60&nbsp;t; paid human loaders (<code>number_of_couriers</code>). No passenger concept exists in <code>Trip</code>.</td></tr>
+      <tr><td><strong>Candidate selection</strong></td><td>Pure-Redis, zero Postgres. H3 resolution 9, k-ring expansion <code>[k,2,5,10,20,50,100,160]</code>, stops at ≥5 drivers, 30&nbsp;km hard cap. Filters: verified, telemetry &lt;300&nbsp;s, car type, cargo type, back-to-back if ≤5&nbsp;min from free.</td></tr>
+      <tr><td><strong>Dispatch</strong></td><td><span class="pill warn">Not as documented</span> Simultaneous broadcast to the top 5; first driver to accept wins, resolved by a row lock. Not cascading waves — see §2.</td></tr>
+      <tr><td><strong>Scoring</strong></td><td>Base = haversine km, then rating modifier (quadratic below 4.5), level bonus −0.05×level, experience bonus, heading alignment ±0.3, fairness penalty +0.15 per recent dispatch. Rating cutoff 3.5 is a soft tier, never a hard gate.</td></tr>
+      <tr><td><strong>Lifecycle</strong></td><td><span class="pill warn">Not as documented</span> <code>REQUESTED → STARTED → LOADING → EN_ROUTE_TO_DESTINATION → UNLOADING → COMPLETED</code>. <code>ACCEPTED</code> and <code>EN_ROUTE_TO_PICKUP</code> are declared and never assigned.</td></tr>
+      <tr><td><strong>Pricing</strong></td><td>Step-function distance/duration brackets per CarType (the containing bracket's rate applies to the whole distance, not marginal), plus loading/unloading overage × waiting rate, plus a flat per-courier fee added after the fare floor. <strong>No weight or volume pricing.</strong></td></tr>
+      <tr><td><strong>Surge</strong></td><td>Demand (Postgres <code>REQUESTED</code>) ÷ supply (Redis H3 sets), clamped 1.0–2.0, locked at quote time. <span class="pill neu">Disabled by default</span></td></tr>
+      <tr><td><strong>Commission</strong></td><td>Flat <strong>10%</strong> on every driver. Cash trips: driver keeps money, accrues debt. Digital: auto-nets against debt. Account holds at 5,000 debt or 7 days unsettled.</td></tr>
+      <tr><td><strong>Payments</strong></td><td><span class="pill ok">More than documented</span> Full Selcom gateway — RSA-signed disbursements, checkout collections, 120&nbsp;s reconciliation polling. Default posture is admin-initiated payouts.</td></tr>
+      <tr><td><strong>Driver tiers</strong></td><td><code>DriverLevel</code> 1–10. Confers <em>only</em> a −0.05×level dispatch score bonus. No billing, no fee, no expiry, no auto-promotion; the promote/demote methods have zero callers.</td></tr>
+      <tr><td><strong>Fraud</strong></td><td>Cancellation geofence 50&nbsp;m + dwell 300&nbsp;s, off-app collusion, passive stall. Suspension writes an append-only event with a frozen account snapshot. <span class="pill neu">Auto-suspend off by default</span></td></tr>
+      <tr><td><strong>Compliance</strong></td><td>LATRA outbound trip reporting (OAuth2, 11 regulator-named fields) and inbound vehicle verification that <strong>fails closed</strong> — an unreachable regulator blocks onboarding.</td></tr>
+      <tr><td><strong>Ops</strong></td><td>Live supply/demand H3 maps, live config editing without redeploy, admin trip cancel. <strong>No manual driver assignment</strong> — the <code>TRIP_REASSIGN</code> audit enum exists with zero call sites.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Structural absences</h3>
+  <p>
+    No multi-stop or multi-drop. No route optimization, load consolidation or backhaul. No proof of
+    delivery of any kind — no signature, photo, recipient identity or delivery OTP. No per-trip weight
+    or volume declaration. No scheduled or advance booking. No B2B or contract shipper accounts. No
+    consignee tracking link. No driver bidding. No rider location tracking. No manual dispatcher assignment.
+  </p>
+  <p>
+    Docs 1 and 2 already identify most of these and propose lines to close them. The audit confirms
+    they are genuine gaps, not overlooked features — with the single exception of the payment gateway,
+    which Doc 1 lists as a gap and which in fact ships.
+  </p>
+
+  <div class="foot"><span>Songa · Internal Strategy · Doc 3 of 3</span><span>3</span></div>
+</div>
+
+<!-- ============ P4 — SECTION 2 CORRECTIONS ============ -->
+<div class="page">
+  <div class="phead"><h2>2 · Corrections to Documents 1 &amp; 2</h2><span class="tag">Highest-value section</span></div>
+
+  <p class="lede">
+    Doc 1 states that every “Exists / Reuse” claim is traceable to a real file. Three are traceable to
+    files that do not do what the claim says. Each was re-verified this session, and each changes an
+    engineering or funding decision.
+  </p>
+
+  <h3><span class="num">2.1</span>The trip lifecycle diagram describes states the code never assigns</h3>
+  <p>
+    Doc 1 (p.3) documents <code>REQUESTED→ACCEPTED→LOADING→EN_ROUTE→UNLOADING→COMPLETED</code>.
+    In the running system, accepting a trip sets status directly to <code>STARTED</code>;
+    <code>ACCEPTED</code> and <code>EN_ROUTE_TO_PICKUP</code> are declared in the model and assigned
+    <strong>only inside test files</strong>.
+  </p>
+  <div class="callout red">
+    <span class="ct">Consequence — a fraud detector that can never fire</span>
+    The passive-stall monitor queries trips whose status is <code>ACCEPTED</code> or
+    <code>EN_ROUTE_TO_PICKUP</code>. Because nothing ever assigns those states, the query matches
+    nothing and the detector has never fired in production. Any roadmap item that reasons about the
+    pickup phase — driver-side ETA, stall detection, arrival geofencing, Doc 1's corporate
+    proof-of-delivery — inherits this hole.
+  </div>
+  <p class="src">Verified: <code>trips/utils/accept_trip.py</code>, <code>trips/tasks/driver_stalling.py</code>; grep for production assignments returns test files only.</p>
+
+  <h3><span class="num">2.2</span>“Tunable dispatch waves” cites dead code, and the waves are discarded</h3>
+  <p>
+    Doc 1 (p.3) lists “H3 geo-matching, tunable dispatch waves, multi-factor scoring” as an existing
+    capability feeding lines 2, 3 and 4, citing <code>utils/raw/driver_matching.py</code>. That module is
+    a legacy variant and is not on the live path; the running matcher is
+    <code>utils/songa_s1/suggest_driver.py</code>.
+  </p>
+  <p>
+    More consequentially, the wave mechanism itself does not operate. The matcher computes
+    <code>dispatch_delay_seconds = index × 15s</code> for each suggested driver — and nothing ever reads it.
+    The dispatch task iterates the matched drivers and broadcasts to all of them immediately. The real
+    dispatch model is <strong>simultaneous broadcast, first-accept-wins</strong>.
+  </p>
+  <div class="callout">
+    <span class="ct">Why this matters for the proposals</span>
+    Doc 1's ride-share (#2) and corporate (#4) lines both assume a wave/cascade primitive they can tune.
+    That primitive must be finished or deliberately deleted before those lines can lean on it. The
+    external research does <em>not</em> settle which is correct — the one comparable source describes
+    proximity auto-assignment but is silent on whether offers are sequential or broadcast, so this stays
+    an internal product decision rather than a copy-the-peers question.
+  </div>
+  <p class="src">Verified: <code>utils/songa_s1/suggest_driver.py:207</code> is the only write; no reader exists outside test scripts.</p>
+
+  <h3><span class="num">2.3</span>The payment gateway is understated — it already ships</h3>
+  <p>
+    Doc 1 (p.3) marks “Live payment gateway (M-Pesa/Airtel/Tigo/card)” as <span class="pill warn">Partial</span>
+    — “labels + placeholder tokens only; cash-settled today” — and funds it as a cross-cutting platform
+    track alongside line #3. In fact a complete Selcom integration ships: a gateway abstraction with
+    RSA-signed disbursements, checkout collections, reconciliation polling every 120 seconds, and
+    configurable payout triggers, with Selcom set as the default gateway.
+  </p>
+  <div class="callout">
+    <span class="ct">Consequence — a funded track is largely already paid for</span>
+    This is the one correction that makes the plan <em>cheaper</em>. The remaining cross-cutting work is
+    push notifications and rider-side card enablement, not building a gateway. Budget freed here is the
+    natural funding source for the retention work proposed in §4.
+  </div>
+  <p class="src">Verified: <code>payments/gateways/selcom_business.py</code>, <code>payments/gateways/base.py</code>, default gateway <code>SELCOM</code>.</p>
+
+  <h3><span class="num">2.4</span>Document 2 holds up</h3>
+  <p>
+    Doc 2's engine inventory was spot-checked and its central claims stand: month-partitioned breadcrumb
+    history and route/ETA reconstruction both exist as described. Its thesis — that the expensive,
+    latency-critical tracking work is done and the remainder is conventional API product build — is
+    consistent with the audit. §3 adds external support for it.
+  </p>
+  <p class="src">Verified: <code>trips/models/TripLocationHistory.py</code>, <code>trips/models/TripActivitySummary.py</code>.</p>
+
+  <div class="foot"><span>Songa · Internal Strategy · Doc 3 of 3</span><span>4</span></div>
+</div>
+
+<!-- ============ P5 — SECTION 3 RESEARCH ============ -->
+<div class="page">
+  <div class="phead"><h2>3 · What Others Are Doing</h2><span class="tag">External research</span></div>
+
+  <div class="callout red">
+    <span class="ct">Evidence quality — read before using this section</span>
+    142 candidate claims were extracted from 29 sources and adversarially verified; <strong>13 were
+    killed and 12 survived</strong>. Coverage is China, the United States and academic literature only.
+    <strong>Zero verified claims concern African platforms</strong> (Kobo360, Lori, Sendy, Trella) and
+    <strong>zero concern the 2023 Convoy and Sendy shutdowns</strong> — no primary post-mortem survived
+    verification. The cargo trip-lifecycle dimension (dwell time, multi-stop, proof-of-delivery, labour
+    add-ons) produced <strong>no verified evidence at all</strong>. Nothing on cash settlement, driver
+    fuel credit, cargo theft or licensing regimes. Four of the twelve surviving findings rest on a
+    <em>single unrefereed working paper</em> with proprietary data and a co-author employed by the platform
+    studied; those four stand or fall together.
+  </div>
+
+  <h3><span class="num">3.1</span>Monetization: peers use a two-part tariff</h3>
+  <p>
+    The documented cargo-platform model is a subscription tier plus <em>conditional</em> commission: a free
+    tier capped at <strong>2 jobs per day</strong> carrying 15% commission, versus roughly
+    <strong>CNY 399–799 per month</strong> for unlimited jobs at <strong>0% commission</strong>. Only 4.2%
+    of sampled transactions actually carried commission at all.
+  </p>
+  <table>
+    <thead><tr><th style="width:34%">Dimension</th><th style="width:33%">Documented peer model</th><th style="width:33%">Songa today</th></tr></thead>
+    <tbody>
+      <tr><td>Commission base</td><td>Free tier only; waived for subscribers</td><td><span class="pill bad">Flat 10% on everyone</span></td></tr>
+      <tr><td>Subscription</td><td>Monthly fee, unlimited jobs, 0% take</td><td><span class="pill bad">Tiers exist, never billed</span></td></tr>
+      <tr><td>Job throttle on free tier</td><td>2 jobs/day cap drives upgrade</td><td>None — unlimited, always commissioned</td></tr>
+      <tr><td>Tier benefit</td><td>Fee waiver (economic)</td><td>−0.05 dispatch score per level (cosmetic)</td></tr>
+    </tbody>
+  </table>
+
+  <h3><span class="num">3.2</span>Disintermediation is the measured failure mode — and commission causes it</h3>
+  <p>
+    Introducing a 15% driver commission across 33 cities <strong>roughly doubled detected off-platform
+    leakage, 3.92% → 7.87%</strong>, while fee-waived subscribers showed no change. Cancellations among
+    the same commissioned drivers rose 23.57% → 28.54%. Over 137 days,
+    <strong>two-thirds of a 1,971-driver sample transacted off-platform at least once.</strong>
+    Raising take-rate manufactures the leakage that erodes freight-marketplace margins.
+  </p>
+  <div class="callout">
+    <span class="ct">A detector we can build with data we already have</span>
+    The same source documents an implementable technique: cross-reference <em>cancelled</em> jobs against
+    <em>driver</em> GPS traces, and flag disintermediation when the assigned driver's GPS falls near
+    <strong>both origin and destination</strong> within the cancelled trip's window and the customer
+    completed no similar on-platform trip. This needs <strong>only driver GPS</strong> — which Songa
+    already stores. Our own off-app collusion detector is currently inert precisely because it was built
+    to require rider location, which the platform does not track. This technique routes around that blocker.
+  </div>
+
+  <h3><span class="num">3.3</span>Dispatch, pricing and the human desk</h3>
+  <ul>
+    <li><strong>Intra-city peers auto-assign on proximity</strong>, customer choosing vehicle class up front — no bidding, no dispatcher desk — at 400–500k matches/day with <strong>over 20% cancellation</strong>. Our cancellation rate is therefore probably normal, not pathological. The source is silent on sequential-vs-broadcast, so it cannot settle §2.2.</li>
+    <li><strong>Freight does not surge-price.</strong> Uber Freight prices a load as a sequence of prices across its 3-hour-to-5-day lead time, solved as a Markov decision process — not an instantaneous multiplier. Shipping our surge disabled by default was the right call.</li>
+    <li><strong>A human operations desk stays in the loop</strong> even at the most automation-forward broker: the two documented fallbacks when matching fails to cover a load are proactive human outreach and rolling the load to a later date. Songa has no manual assignment and no fallback but failing the trip.</li>
+    <li><strong>Matching radius is a real decision variable</strong> (medium confidence) — too small starves fulfilment, too large inflates pickup distance — and should vary by zone and time of day. Our per-region override hook exists and is unused.</li>
+    <li><strong>H3 in freight is documented for lane and ETA work, not dispatch:</strong> origin/destination hashed at resolution 4 into a lane code, GPS pings discretized at resolution 6, route similarity computed as hex-cell overlap across ~2M lanes. This is external support for <strong>Doc 2</strong>, and a concrete technique its analytics tier could adopt.</li>
+  </ul>
+
+  <div class="foot"><span>Songa · Internal Strategy · Doc 3 of 3</span><span>5</span></div>
+</div>
+
+<!-- ============ P6 — SECTION 4 PROPOSAL ============ -->
+<div class="page">
+  <div class="phead"><h2>4 · What Should Be Added</h2><span class="tag">Proposal</span></div>
+
+  <p class="lede">
+    Docs 1 and 2 propose six growth surfaces. This section does not replace them — it adds the line they
+    both miss, adjusts their sequencing on the evidence, and lists the correctness work that gates them.
+  </p>
+
+  <h3><span class="num">4.1</span>New line #0 — Driver retention &amp; anti-leakage <span class="pill bad">Missing from Docs 1 &amp; 2</span></h3>
+  <p>
+    This is the highest-confidence item in the document because it is the one place where the strongest
+    external evidence lands squarely on a live configuration of ours. Three components:
+  </p>
+  <div class="split">
+    <div class="panel keep">
+      <h5>✓ Reuse (already ships)</h5>
+      <ul>
+        <li>Driver GPS breadcrumb history — <code>TripLocationHistory</code></li>
+        <li>Cancellation records with reason + geofence data — <code>TripAction</code></li>
+        <li>Fraud profile counters &amp; suspension chokepoint with frozen snapshots</li>
+        <li>Config-driven thresholds, live-editable without redeploy</li>
+        <li>Selcom gateway for subscription collection (§2.3)</li>
+      </ul>
+    </div>
+    <div class="panel fix">
+      <h5>▲ Build (net-new)</h5>
+      <ul>
+        <li>Leakage detector: cancelled-trip × driver-GPS correlation (§3.2)</li>
+        <li>Leakage rate as a first-class ops metric, per driver and per corridor</li>
+        <li><code>DriverLevel</code> → real subscription: fee, term, expiry, purchase flow</li>
+        <li>Commission waiver for subscribers; free-tier job throttle</li>
+      </ul>
+    </div>
+  </div>
+  <p>
+    The monetization half is a <strong>product and pricing decision, not primarily an engineering one</strong>,
+    and should be modelled on our own numbers first — the peer figures are 2019-era, from another market,
+    and carry the §3 caveats. The detector half can proceed immediately: it needs no pricing decision,
+    revives a detector we already shipped, and produces the measurement any pricing decision would need.
+  </p>
+
+  <h3><span class="num">4.2</span>Manual dispatcher assignment</h3>
+  <p>
+    Every peer model retains a human desk; ours has none, and our only fallback when matching fails is
+    terminating the trip as no-driver-found. The audit enum <code>TRIP_REASSIGN</code> already exists with
+    zero call sites. Scope: an RBAC-gated, audit-logged admin endpoint to assign or reassign a driver to a
+    live trip. Small, and it directly reduces the funnel loss Doc 1 cites as a benefit of scheduling.
+  </p>
+
+  <h3><span class="num">4.3</span>Adjustments to Doc 1's plan</h3>
+  <table>
+    <thead><tr><th style="width:30%">Doc 1 position</th><th>Adjustment</th></tr></thead>
+    <tbody>
+      <tr><td>Ship #3 Scheduling first</td><td><span class="pill ok">Unchanged</span> Cheapest high-value line; genuinely shapes demand.</td></tr>
+      <tr><td>Platform track = gateway + push</td><td><span class="pill ok">Cheaper</span> Gateway ships (§2.3); only push and rider card remain. Redirect freed budget to §4.1.</td></tr>
+      <tr><td>#1 Fleet is the supply backbone</td><td><span class="pill warn">After retention</span> Leakage compounds per truck added — contain it before scaling supply.</td></tr>
+      <tr><td>#2 &amp; #4 rely on tunable dispatch waves</td><td><span class="pill bad">Blocked</span> Primitive does not operate (§2.2) — finish or delete first.</td></tr>
+      <tr><td>Surge as a lever</td><td><span class="pill neu">Keep off</span> Freight prices over lead time, not by instantaneous multiplier (§3.3).</td></tr>
+      <tr><td>Doc 2 tracking business</td><td><span class="pill ok">Supported</span> Corroborated; consider H3 lane-code discretization (§3.3).</td></tr>
+    </tbody>
+  </table>
+
+  <h3><span class="num">4.4</span>Correctness backlog — six verified defects</h3>
+  <table>
+    <thead><tr><th class="num">#</th><th style="width:34%">Defect</th><th>Effect</th><th style="width:10%">Size</th></tr></thead>
+    <tbody>
+      <tr><td class="num">1</td><td>Passive-stall detector queries unassigned statuses</td><td>Has never fired; pickup phase unmodelled (§2.1)</td><td>S</td></tr>
+      <tr><td class="num">2</td><td>Unloading duration never measured — written to a nonexistent model field</td><td>Billed waiting fee is driver-reported, unauditable</td><td>S</td></tr>
+      <tr><td class="num">3</td><td>Wave delays computed, never consumed</td><td>Dispatch model is not what the docs claim (§2.2)</td><td>S</td></tr>
+      <tr><td class="num">4</td><td>Payment-method enum mismatch — <code>'MOBILE MONEY'</code> vs <code>'MOBILE_MONEY'</code></td><td>The spaced variant fails the payment guard</td><td>S</td></tr>
+      <tr><td class="num">5</td><td>Cancellation fee can never be granted — requires an always-false contact flag; no fee configured</td><td>A designed policy that never executes</td><td>S</td></tr>
+      <tr><td class="num">6</td><td>Transposed default coordinate on driver location</td><td>Latitude/longitude reversed in the model default</td><td>S</td></tr>
+    </tbody>
+  </table>
+
+  <div class="foot"><span>Songa · Internal Strategy · Doc 3 of 3</span><span>6</span></div>
+</div>
+
+<!-- ============ P7 — ROADMAP ============ -->
+<div class="page">
+  <div class="phead"><h2>5 · Merged Roadmap</h2><span class="tag">Docs 1 + 2 + 3</span></div>
+
+  <p class="lede">
+    Dependency-ordered, merging Doc 1's five lines, Doc 2's tracking business, and this document's
+    additions. Sizes are engineering-relative; week ranges from Docs 1 and 2 are carried through unchanged.
+  </p>
+
+  <table>
+    <thead><tr><th class="num">#</th><th style="width:26%">Item</th><th style="width:12%">Source</th><th>Rationale</th><th style="width:9%">Size</th></tr></thead>
+    <tbody>
+      <tr><td class="num">0</td><td><strong>Correctness backlog</strong> (6 defects)</td><td><span class="pill bad">Doc 3</span></td><td>Two detectors that cannot fire and an unauditable billing input. Gates anything reasoning about the pickup phase.</td><td>S</td></tr>
+      <tr><td class="num">1</td><td><strong>Leakage detector</strong></td><td><span class="pill bad">Doc 3</span></td><td>Only quantified failure mode in the research. Uses driver GPS we already have; produces the measurement the pricing decision needs.</td><td>M</td></tr>
+      <tr><td class="num">2</td><td><strong>Scheduling</strong></td><td><span class="pill neu">Doc 1 #3</span></td><td>Cheapest high-value line; stub screens already placed; precursor to corporate contracts.</td><td>3–4 wk</td></tr>
+      <tr><td class="num">3</td><td><strong>Manual dispatcher assignment</strong></td><td><span class="pill bad">Doc 3</span></td><td>Every peer retains a human desk; audit enum already exists. Cuts no-driver-found loss.</td><td>S–M</td></tr>
+      <tr><td class="num">4</td><td><strong>Driver monetization restructure</strong></td><td><span class="pill bad">Doc 3</span></td><td>Two-part tariff vs flat 10%. Model on our own leakage data from #1 first — pricing decision, not a port of peer numbers.</td><td>L</td></tr>
+      <tr><td class="num">5</td><td><strong>Resolve dispatch waves</strong></td><td><span class="pill warn">Doc 3 / Doc 1</span></td><td>Finish or delete. Unblocks Doc 1 lines #2 and #4, which assume the primitive works.</td><td>S</td></tr>
+      <tr><td class="num">6</td><td><strong>Fleet management</strong></td><td><span class="pill neu">Doc 1 #1</span></td><td>Supply backbone — but sequenced after retention so leakage does not scale with the fleet.</td><td>6–8 wk</td></tr>
+      <tr><td class="num">7</td><td><strong>Songa Track</strong></td><td><span class="pill info">Doc 2</span></td><td>Externally corroborated; lands on fleet owners from #6 as design partners. Privacy/consent review is launch-blocking.</td><td>L</td></tr>
+      <tr><td class="num">8</td><td><strong>B2B / Corporate cargo</strong></td><td><span class="pill neu">Doc 1 #4</span></td><td>Highest ARPU. Needs fleet supply (#6), scheduling (#2) and proof-of-delivery.</td><td>8–10 wk</td></tr>
+      <tr><td class="num">9</td><td><strong>Ride-share / Goods selling</strong></td><td><span class="pill neu">Doc 1 #2, #5</span></td><td>Demand experiments on the same rails once the backbone exists. Ride-share additionally blocked on #5.</td><td>7–9 wk ea.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>What this document deliberately does not propose</h3>
+  <p>
+    Multi-stop routing, proof-of-delivery, weight/volume pricing and scheduled-booking mechanics are real
+    absences, and Docs 1 and 2 already scope several of them. This document does <strong>not</strong> add
+    independent recommendations on their design, because the research returned no verified evidence on
+    cargo trip-lifecycle norms — prioritising them on that basis would be guesswork dressed as analysis.
+    They remain Doc 1's proposals, on Doc 1's reasoning.
+  </p>
+
+  <div class="callout blue">
+    <span class="ct">Recommended follow-up research</span>
+    Two gaps are directly decision-relevant and both came back empty: <strong>(a)</strong> African cargo
+    platform operating models — dispatch style, cash settlement, driver fuel credit and financing,
+    licensing regimes; and <strong>(b)</strong> cargo trip-lifecycle mechanics — dwell time, multi-stop
+    sequencing, waiting-fee triggers, proof-of-delivery capture, labour add-ons. Closing (a) would tell us
+    whether the China/US monetization evidence transfers to Tanzania at all; closing (b) would let §4
+    speak to Doc 1's lines #2, #4 and #5 on evidence rather than deferring to them.
+  </div>
+
+  <h3>What this document is, and is not</h3>
+  <p>
+    It is an audit and a comparison. Claims about our platform were read out of the current tree and
+    re-verified; claims about other platforms carry sources and survived adversarial verification, with
+    the coverage gaps stated in §3 rather than smoothed over. It is not a market sizing or a financial
+    forecast, and the effort ratings are engineering-relative. The monetization proposal in §4.1 in
+    particular needs our own leakage and driver-economics numbers before it becomes a plan.
+  </p>
+
+  <div class="foot"><span>Songa · Internal Strategy · Doc 3 of 3 · Companion to Documents 1 and 2</span><span>7</span></div>
+</div>
+
+</body>
+</html>

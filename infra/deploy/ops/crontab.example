@@ -1,0 +1,4 @@
+# Install on each host with: crontab -e (as the deploy user, from /opt/platform).
+# Times are UTC. Backups at 02:15, ledger verification at 03:05.
+15 2 * * *  cd /opt/platform && . ./.env && docker compose -f compose.yml -f compose.$DEPLOY_ENV.yml --profile ops run --rm backup >> /var/log/platform-backup.log 2>&1
+5 3 * * *   /opt/platform/ops/verify-ledger.sh >> /var/log/platform-ledger.log 2>&1

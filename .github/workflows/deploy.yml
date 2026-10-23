@@ -1,0 +1,58 @@
+# Deploys one release to one environment over SSH. Called by release.yml; can also be
+# run by hand (Actions > deploy > Run workflow) to roll back to an earlier image.
+# The host runs infra/deploy/ops/deploy.sh: pull -> migrate -> seed -> up -d --wait -> smoke.
+name: deploy
+on:
+  workflow_call:
+    inputs:
+      environment: { type: string, required: true }
+      api_image: { type: string, required: true }
+      admin_image: { type: string, required: true }
+  workflow_dispatch:
+    inputs:
+      environment: { type: choice, options: [uat, production], required: true }
+      api_image: { type: string, required: true, description: "ghcr.io/<owner>/<repo>/nexa:<sha>" }
+      admin_image: { type: string, required: true, description: "ghcr.io/<owner>/<repo>/admin:<sha>-<env>" }
+permissions: { contents: read }
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: ${{ inputs.environment }}
+      url: https://${{ vars.ADMIN_DOMAIN }}
+    # One deploy per environment at a time; a queued one waits rather than racing migrations.
+    concurrency: { group: "deploy-${{ inputs.environment }}", cancel-in-progress: false }
+    env:
+      HOST: ${{ secrets.DEPLOY_HOST }}
+      USER_AT_HOST: ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}
+      DEPLOY_PATH: ${{ vars.DEPLOY_PATH || '/opt/platform' }}
+      # Inputs go through env, never straight into a script (no shell injection).
+      API_IMAGE: ${{ inputs.api_image }}
+      ADMIN_IMAGE: ${{ inputs.admin_image }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: SSH key and pinned host key
+        run: |
+          install -m 700 -d ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
+          echo "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          printf 'Host *\n  IdentityFile ~/.ssh/id_deploy\n  StrictHostKeyChecking yes\n' > ~/.ssh/config
+      - name: Ship hosting files (compose, Caddy, monitoring, ops scripts; never env files)
+        run: |
+          rsync -az --delete-after \
+            --exclude 'env/' --exclude '*.env' --exclude '.env' --exclude 'secrets/' \
+            infra/deploy/ "$USER_AT_HOST:$DEPLOY_PATH/"
+      - name: Registry login on the host (read-only token)
+        run: |
+          echo "${{ secrets.GHCR_READ_TOKEN }}" | ssh "$USER_AT_HOST" \
+            docker login ghcr.io -u "${{ vars.GHCR_READ_USER }}" --password-stdin
+      - name: Migrate, start, smoke (on the host)
+        run: |
+          case "$API_IMAGE$ADMIN_IMAGE" in *[!A-Za-z0-9./:_@-]*) echo "bad image name"; exit 1 ;; esac
+          # shellcheck disable=SC2029 # expanded here on purpose, validated above
+          ssh "$USER_AT_HOST" "$DEPLOY_PATH/ops/deploy.sh $API_IMAGE $ADMIN_IMAGE"
+      - name: Smoke from outside (TLS, DNS, expected build)
+        run: |
+          version="${API_IMAGE##*:}"
+          infra/deploy/ops/smoke.sh "https://${{ vars.API_DOMAIN }}/v1" "https://${{ vars.ADMIN_DOMAIN }}" "$version"

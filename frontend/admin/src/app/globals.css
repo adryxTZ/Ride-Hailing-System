@@ -1,0 +1,149 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens. The brand colour comes from GET /v1/app/config at runtime
+ * (ThemeBridge sets --brand); everything else is the dashboard's neutral system.
+ * Light is the default; dark is designed, not derived, and the toggle wins both ways.
+ */
+:root {
+  --canvas: #f2f1ef;
+  --surface: #ffffff;
+  --surface-2: #f7f6f4;
+  --ink: #141413;
+  --muted: #6f6b66;
+  --line: rgba(20, 20, 19, 0.07);
+  --brand: #5003c0;
+  --brand-ink: #ffffff;
+  --brand-soft: color-mix(in srgb, var(--brand) 10%, var(--surface));
+  --brand-text: var(--brand); /* brand colour used as text; lifted in dark mode for contrast */
+  --nav: #141413;
+  --nav-ink: #ffffff;
+  --good: #0ca30c;
+  --warn: #c98500;
+  --serious: #ec835a;
+  --critical: #d03b3b;
+  --chart-1: #2a78d6;
+  --chart-2: #eb6834;
+  --chart-3: #1baf7a;
+  --chart-4: #eda100;
+  --chart-surface: #fcfcfb;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --canvas: #111110;
+    --surface: #1b1b1a;
+    --surface-2: #232321;
+    --ink: #f3f2f0;
+    --muted: #a19d97;
+    --line: rgba(255, 255, 255, 0.08);
+    --nav: #f3f2f0;
+    --nav-ink: #141413;
+    --brand-text: color-mix(in oklab, var(--brand) 45%, white);
+    --good: #3fc23f;
+    --brand-text: color-mix(in oklab, var(--brand) 45%, white);
+    --good: #3fc23f;
+    --chart-1: #3987e5;
+    --chart-2: #d95926;
+    --chart-3: #199e70;
+    --chart-4: #c98500;
+    --chart-surface: #1a1a19;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --canvas: #111110;
+  --surface: #1b1b1a;
+  --surface-2: #232321;
+  --ink: #f3f2f0;
+  --muted: #a19d97;
+  --line: rgba(255, 255, 255, 0.08);
+  --nav: #f3f2f0;
+  --nav-ink: #141413;
+  --brand-text: color-mix(in oklab, var(--brand) 45%, white);
+  --good: #3fc23f;
+  --chart-1: #3987e5;
+  --chart-2: #d95926;
+  --chart-3: #199e70;
+  --chart-4: #c98500;
+  --chart-surface: #1a1a19;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-brand: var(--brand);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-text: var(--brand-text);
+  --color-nav: var(--nav);
+  --color-nav-ink: var(--nav-ink);
+  --color-good: var(--good);
+  --color-warn: var(--warn);
+  --color-serious: var(--serious);
+  --color-critical: var(--critical);
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+  --ease-out-soft: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+html,
+body {
+  background: var(--canvas);
+  color: var(--ink);
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  touch-action: manipulation;
+}
+
+/* Figures line up in tables and tiles. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+}
+.skip-link:focus {
+  left: 16px;
+  top: 12px;
+  z-index: 100;
+  background: var(--surface);
+  padding: 8px 14px;
+  border-radius: 999px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Scroll areas that still scroll (wheel, touch, keyboard) but show no scrollbar:
+   the side navigation and the trips column on person pages. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}

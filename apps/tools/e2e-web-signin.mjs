@@ -1,0 +1,35 @@
+// Smoke test: rider web build sign-in with a test number. Run: OUT=./tools/shots node tools/e2e-web-signin.mjs (needs `expo start --web --port 8083`).
+// Drives the rider web build through sign-in with a test number and captures screenshots.
+import { chromium } from "playwright";
+const out = process.env.OUT;
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport: { width: 420, height: 820 } });
+const log = (m) => console.log(new Date().toISOString().slice(11, 19), m);
+page.on("console", (msg) => { if (msg.type() === "error") log("console.error: " + msg.text().slice(0, 200)); });
+await page.goto("http://localhost:8083/", { waitUntil: "networkidle", timeout: 240000 });
+await page.getByPlaceholder("07XX XXX XXX").waitFor({ timeout: 60000 });
+await page.screenshot({ path: `${out}/1-phone.png` }); log("phone screen rendered");
+await page.getByPlaceholder("07XX XXX XXX").fill("255626512332");
+await page.getByText("Send code", { exact: true }).click(); log("requested code");
+await page.getByText("Enter the code").waitFor({ timeout: 20000 });
+await page.screenshot({ path: `${out}/2-otp.png` }); log("otp screen rendered, dev code shown: " + (await page.getByText(/Development: code is/).count() > 0));
+await page.getByText("Verify", { exact: true }).click(); log("verifying");
+await page.getByText("Where to?", { exact: true }).waitFor({ timeout: 20000 });
+await page.screenshot({ path: `${out}/3-home.png`, fullPage: true }); log("home: taxi map rendered");
+await page.reload({ waitUntil: "networkidle", timeout: 240000 });
+await page.getByText("Where to?", { exact: true }).waitFor({ timeout: 20000 }); log("session survived reload");
+await page.goto("http://localhost:8083/account", { waitUntil: "networkidle", timeout: 240000 });
+await page.getByText("Settings", { exact: true }).waitFor({ timeout: 20000 });
+await page.screenshot({ path: `${out}/5-account.png`, fullPage: true });
+await page.goto("http://localhost:8083/account/payment", { waitUntil: "networkidle", timeout: 240000 });
+await page.getByText("Payment methods", { exact: true }).waitFor({ timeout: 20000 });
+await page.screenshot({ path: `${out}/7-payment.png`, fullPage: true });
+await page.goto("http://localhost:8083/account", { waitUntil: "networkidle", timeout: 240000 });
+await page.getByText("Settings", { exact: true }).click();
+await page.getByText("Log out", { exact: true }).waitFor({ timeout: 20000 });
+await page.screenshot({ path: `${out}/6-settings.png`, fullPage: true });
+await page.getByText("Log out", { exact: true }).click();
+await page.getByPlaceholder("07XX XXX XXX").waitFor({ timeout: 20000 });
+await page.screenshot({ path: `${out}/4-signed-out.png` }); log("signed out → phone screen");
+log("SIGNIN E2E PASSED");
+await browser.close();

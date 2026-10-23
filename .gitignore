@@ -1,0 +1,57 @@
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Go
+backend/bin/
+backend/tmp/
+backend/coverage.out
+
+# Node
+node_modules/
+.pnpm-store/
+dist/
+.turbo/
+.expo/
+*.tsbuildinfo
+apps/*/android/
+apps/*/ios/
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+infra/keys/
+*.pem
+*.p8
+
+# Build assets generated from brands/
+apps/*/assets/generated/
+
+# Local data (uploads, signing secrets)
+backend/data/
+backend/.keys/
+apps/tools/shots/
+apps/tools/logs/
+
+# Server-side deploy configuration (copied from infra/deploy/env/*.example on the host)
+infra/deploy/*.env
+infra/deploy/secrets/
+infra/loadtest/results/
+
+# Next.js build and dev caches
+.next/
+next-env.d.ts
+
+# Compiled binaries
+backend/nexa
+
+# Large media (keep design videos out of git; share them separately)
+*.mp4
+*.mov
+
+# Local Claude Code session files
+.claude/settings.local.json
+.claude/worktrees/

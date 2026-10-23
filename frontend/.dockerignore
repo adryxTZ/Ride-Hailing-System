@@ -1,0 +1,9 @@
+# Host installs and build output must not leak into the image: node_modules are
+# platform-specific (pnpm symlinks, native binaries) and are installed fresh.
+**/node_modules
+**/.next
+**/.turbo
+**/*.tsbuildinfo
+**/.env
+**/.env.*
+!**/.env.example

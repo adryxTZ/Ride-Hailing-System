@@ -1,0 +1,12 @@
+# Host installs, native projects and tool output stay out of the image.
+**/node_modules
+**/.expo
+**/android
+**/ios
+**/*.tsbuildinfo
+**/.env
+**/.env.*
+!**/.env.example
+tools/shots
+tools/logs
+*.png

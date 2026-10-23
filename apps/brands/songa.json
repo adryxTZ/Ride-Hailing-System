@@ -1,0 +1,12 @@
+{
+  "code": "songa",
+  "display_name": "Songa",
+  "deep_link_scheme": "songa",
+  "rider":  { "slug": "songa-rider",  "android_package": "co.tz.songa.rider",  "ios_bundle_id": "co.tz.songa.rider" },
+  "driver": { "slug": "songa-driver", "android_package": "co.tz.songa.driver", "ios_bundle_id": "co.tz.songa.driver" },
+  "api_base_url": {
+    "local": "http://localhost:8080/v1",
+    "uat": "https://uat-api.example.com/v1",
+    "prod": "https://api.example.com/v1"
+  }
+}
