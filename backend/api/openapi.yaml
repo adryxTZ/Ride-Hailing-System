@@ -972,6 +972,7 @@ paths:
       tags: [driver]
       operationId: acceptOffer
       summary: Accept a ride offer (atomic; a late or second accept gets 404/409)
+      description: "A driver still finishing a trip gets a queued offer (queued = true) as their next trip: the trip is ACCEPTED with queued = true and starts only after the current trip ends (NEXT_TRIP_ALREADY_QUEUED when one is already queued)."
       parameters: [{ name: tripId, in: path, required: true, schema: { type: string, format: uuid } }]
       responses:
         "200":
@@ -1004,6 +1005,20 @@ paths:
                 type: object
                 properties:
                   trip: { oneOf: [{ $ref: "#/components/schemas/Trip" }, { type: "null" }] }
+  /driver/trips/next:
+    get:
+      tags: [driver]
+      operationId: getDriverNextTrip
+      summary: The trip queued after the driver's current one (accepted while finishing), or null
+      responses:
+        "200":
+          description: Next trip
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  next_trip: { oneOf: [{ $ref: "#/components/schemas/NextTrip" }, { type: "null" }] }
   /driver/trips:
     get:
       tags: [driver]
@@ -1122,7 +1137,7 @@ paths:
       tags: [driver]
       operationId: transitionTrip
       summary: Move the assigned trip one step (must be in allowed_transitions)
-      description: "CANCELLED_BY_DRIVER before the ride starts sends the trip back to matching; with reason rider_no_show (after the no-show wait at the pickup) it ends the trip and charges the cancellation fee."
+      description: "CANCELLED_BY_DRIVER before the ride starts sends the trip back to matching; with reason rider_no_show (after the no-show wait at the pickup) it ends the trip and charges the cancellation fee. A queued next trip cannot move to EN_ROUTE_TO_PICKUP until the current trip ends (NEXT_TRIP_WAITING); completing the current trip makes the queued one current."
       parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
       requestBody:
         required: true
@@ -3318,6 +3333,45 @@ paths:
         "400": { $ref: "#/components/responses/Error" }
         "403": { $ref: "#/components/responses/Error" }
         "409": { $ref: "#/components/responses/Error" }
+  /admin/dispatch/settings:
+    get:
+      tags: [admin]
+      operationId: listDispatchSettings
+      summary: Each country's dispatch settings in the staff member's scope (dispatch.manage)
+      responses:
+        "200":
+          description: Settings per country
+          content:
+            application/json:
+              schema: { type: object, required: [data], properties: { data: { type: array, items: { $ref: "#/components/schemas/DispatchSettings" } } } }
+        "403": { $ref: "#/components/responses/Error" }
+  /admin/dispatch/settings/{country}:
+    patch:
+      tags: [admin]
+      operationId: setDispatchSettings
+      summary: Change a country's trip-queue settings (audited; REASON_REQUIRED, COUNTRY_UNKNOWN, FINISHING_STATUSES_INVALID)
+      parameters:
+        - { name: country, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                trip_queue_enabled: { type: boolean }
+                finishing_statuses: { type: array, minItems: 1, items: { type: string, enum: [IN_TRANSIT, ARRIVED_AT_DROPOFF, AWAITING_PAYMENT] } }
+                reason: { type: string, minLength: 1 }
+      responses:
+        "200":
+          description: The country's settings
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DispatchSettings" }
+        "400": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
   /admin/compliance/regulator:
     get:
       tags: [admin]
@@ -5387,6 +5441,26 @@ components:
         pickup_eta_s: { type: integer }
         trip_distance_m: { type: integer }
         stops_count: { type: integer, description: Stops between pickup and drop-off }
+        queued: { type: boolean, description: "The driver is finishing a trip: this is their next trip, starting after the current one (pickup_eta_s includes the finishing time)" }
+    NextTrip:
+      type: object
+      description: The driver's queued next trip, as the "Next trip" banner shows it
+      required: [trip_id, code, pickup, pickup_distance_m]
+      properties:
+        trip_id: { type: string, format: uuid }
+        code: { type: string }
+        pickup: { $ref: "#/components/schemas/OfferStop" }
+        rider_first_name: { type: string }
+        pickup_distance_m: { type: integer, description: From the current trip's drop-off }
+        pickup_eta_s: { type: integer, description: Promised pickup time from now, finishing time included }
+    DispatchSettings:
+      type: object
+      required: [country, trip_queue_enabled, finishing_statuses]
+      properties:
+        country: { type: string }
+        trip_queue_enabled: { type: boolean, description: "Offer the next trip while a driver is finishing (default on)" }
+        finishing_statuses: { type: array, items: { type: string, enum: [IN_TRANSIT, ARRIVED_AT_DROPOFF, AWAITING_PAYMENT] }, description: "Trip statuses that count as finishing (default ARRIVED_AT_DROPOFF, AWAITING_PAYMENT)" }
+        updated_at: { type: string, format: date-time, description: Absent while the defaults apply }
     NearbyVehicle:
       type: object
       required: [location, heading, vehicle_classes, distance_m]
@@ -5430,6 +5504,9 @@ components:
         vehicle_id: { type: string }
         trip_id: { type: string }
         at: { type: string, format: date-time, description: Last ping (server time) }
+        finishing: { type: boolean, description: "The current trip is in a finishing status (trip queue)" }
+        dropoff: { $ref: "#/components/schemas/Point" }
+        queued_trip_id: { type: string, description: "The next trip offered to or accepted by the driver while finishing" }
     DriverStatus:
       type: object
       required: [online, holds]
@@ -6338,6 +6415,8 @@ components:
         cancel_reason: { type: string }
         payment_status: { type: string, enum: [DUE, PENDING, FAILED, COLLECTED, CASH_CONFIRMED], description: "Set once the ride ends" }
         payment: { $ref: "#/components/schemas/TripPayment" }
+        queued: { type: boolean, description: "The assigned driver is finishing another trip nearby; this one starts after it (no start button until then)" }
+        queued_pickup_eta_s: { type: integer, description: "While queued: the pickup estimate in seconds, finishing time included" }
     Receipt:
       type: object
       description: One immutable receipt per completed trip; lines add up to the total.

@@ -26,6 +26,7 @@ import {
   Tag,
   UserCog,
   Users,
+  Waypoints,
   Wrench,
 } from "lucide-react";
 
@@ -113,6 +114,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/settings/branding", label: "Branding", icon: Palette },
       { href: "/settings/legal", label: "Legal", icon: Scale },
       { href: "/settings/approvals", label: "Approval workflows", icon: GitPullRequestArrow },
+      { href: "/settings/dispatch", label: "Dispatch", icon: Waypoints },
     ],
   },
 ];

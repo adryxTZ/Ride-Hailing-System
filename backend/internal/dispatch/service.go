@@ -3,6 +3,7 @@ package dispatch
 import (
 	"context"
 	"log/slog"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
@@ -32,7 +33,16 @@ type Service struct {
 	// periodic runs on the leader every periodicInterval (e.g. surge).
 	periodic []func(ctx context.Context)
 	lastRun  time.Time
+	// settings are the per-country trip-queue switches (nil = defaults). Set
+	// once at wiring, possibly after the loop started, hence atomic.
+	settings atomic.Pointer[Settings]
 }
+
+// UseSettings connects the per-country dispatch settings (trip queue).
+func (s *Service) UseSettings(st *Settings) { s.settings.Store(st) }
+
+// Settings returns the dispatch settings (the admin page reads and writes them).
+func (s *Service) Settings() *Settings { return s.settings.Load() }
 
 // periodicInterval is how often leader-only background work runs.
 const periodicInterval = 30 * time.Second
@@ -141,8 +151,10 @@ func (s *Service) match(ctx context.Context) error {
 	return nil
 }
 
-// candidates widens the search ring until idle, eligible drivers appear.
+// candidates widens the search ring until eligible drivers appear: idle ones,
+// and finishing ones when the request's country allows the trip queue.
 func (s *Service) candidates(ctx context.Context, r trips.OpenRequest, asked map[string]bool) []candidate {
+	queueOn := s.queueRule(ctx, r.Country)
 	for _, k := range ringSteps {
 		drivers, err := s.presence.Nearby(ctx, r.Pickup, k, r.ServiceKey, r.VehicleClass, r.AreaID, CandidateCap*2)
 		if err != nil {
@@ -151,11 +163,11 @@ func (s *Service) candidates(ctx context.Context, r trips.OpenRequest, asked map
 		}
 		var out []candidate
 		for _, d := range drivers {
-			dist := routing.HaversineM(r.Pickup, d.Location)
-			if !offerable(d, r, asked, dist) {
+			c, ok := candidateOf(d, r, asked, queueOn)
+			if !ok {
 				continue
 			}
-			out = append(out, candidate{TripID: r.TripID, DriverID: d.ID, DistanceM: dist, EtaS: etaSeconds(dist)})
+			out = append(out, c)
 			if len(out) == CandidateCap {
 				break
 			}
@@ -197,13 +209,24 @@ func (s *Service) offer(ctx context.Context, c candidate) {
 	if err != nil || t == nil {
 		return
 	}
-	_ = s.presence.SetState(ctx, c.DriverID, presence.Offered, c.TripID, t.RiderID)
+	s.holdForOffer(ctx, c, t.RiderID)
 	o := buildOffer(t, c.DistanceM, c.EtaS, expires)
+	o.Queued = c.Queued
 	s.hub.Publish(ctx, c.DriverID, realtime.NewFrame(realtime.TypeOfferNew, o))
 	for _, fn := range s.onOffer {
 		fn(ctx, c.DriverID, o)
 	}
 	s.trips.Notify(ctx, c.TripID)
+}
+
+// holdForOffer marks the driver as answering an offer: OFFERED for an idle
+// driver; a finishing driver stays ON_TRIP with the offer as their queued trip.
+func (s *Service) holdForOffer(ctx context.Context, c candidate, riderID string) {
+	if c.Queued {
+		_, _ = s.presence.SetQueued(ctx, c.DriverID, c.TripID)
+		return
+	}
+	_ = s.presence.SetState(ctx, c.DriverID, presence.Offered, c.TripID, riderID)
 }
 
 // expireOffers turns timed-out offers into TIMED_OUT and frees trip and driver.
@@ -228,8 +251,10 @@ func (s *Service) expireOffers(ctx context.Context) error {
 	return err
 }
 
-// Accept assigns the trip to the driver if their offer is still open.
+// Accept assigns the trip to the driver if their offer is still open. A
+// driver still finishing a trip gets it as their next trip (queued).
 func (s *Service) Accept(ctx context.Context, tripID, driverID string) (*trips.Trip, error) {
+	queued := false
 	err := pgx.BeginFunc(ctx, s.store.pool, func(tx pgx.Tx) error {
 		o, err := s.store.lockOpen(ctx, tx, tripID, driverID)
 		if err != nil {
@@ -244,7 +269,8 @@ func (s *Service) Accept(ctx context.Context, tripID, driverID string) (*trips.T
 		if err := s.store.close(ctx, tx, tripID, driverID, "ACCEPTED"); err != nil {
 			return err
 		}
-		return s.trips.Assign(ctx, tx, tripID, driverID)
+		queued, err = s.trips.AssignNext(ctx, tx, tripID, driverID, o.EtaS)
+		return err
 	})
 	if err != nil {
 		return nil, err
@@ -253,7 +279,11 @@ func (s *Service) Accept(ctx context.Context, tripID, driverID string) (*trips.T
 	if err != nil || t == nil {
 		return t, err
 	}
-	_ = s.presence.SetState(ctx, driverID, presence.OnTrip, tripID, t.RiderID)
+	if queued {
+		_, _ = s.presence.SetQueued(ctx, driverID, tripID) // stays ON_TRIP with the current trip
+	} else {
+		_ = s.presence.SetState(ctx, driverID, presence.OnTrip, tripID, t.RiderID)
+	}
 	s.trips.Notify(ctx, tripID)
 	return t, nil
 }
@@ -291,18 +321,23 @@ func (s *Service) Current(ctx context.Context, driverID string) (*Offer, error) 
 	if err != nil || t == nil {
 		return nil, err
 	}
-	return buildOffer(t, float64(o.DistanceM), o.EtaS, o.ExpiresAt), nil
+	offer := buildOffer(t, float64(o.DistanceM), o.EtaS, o.ExpiresAt)
+	offer.Queued = o.Queued
+	return offer, nil
 }
 
-// TripChanged keeps drivers in step with trip changes made elsewhere: a cancelled
-// or finished trip closes its open offer and returns the driver to IDLE.
+// TripChanged keeps drivers in step with trip changes made elsewhere: a trip
+// reaching a finishing status marks its driver finishing (trip queue); a
+// cancelled or finished trip closes its open offer and moves the driver on to
+// their next trip, or back to IDLE.
 func (s *Service) TripChanged(ctx context.Context, t *trips.Trip) {
 	if !trips.IsTerminal(t.Status) && t.Status != trips.Requested {
+		s.markFinishing(ctx, t)
 		return
 	}
 	s.closeOffersFor(ctx, t.ID)
 	if t.DriverID != nil {
-		_ = s.presence.SetState(ctx, *t.DriverID, presence.Idle, "", "")
+		s.DriverLeftTrip(ctx, *t.DriverID, t.ID)
 	}
 }
 
@@ -313,8 +348,9 @@ func (s *Service) closeOffersFor(ctx context.Context, tripID string) {
 	}
 }
 
+// freeDriver releases the driver from an offer that ended and tells the app.
 func (s *Service) freeDriver(ctx context.Context, driverID, tripID, reason string) {
-	_ = s.presence.SetState(ctx, driverID, presence.Idle, "", "")
+	_ = s.presence.ReleaseOffer(ctx, driverID, tripID)
 	s.hub.Publish(ctx, driverID, realtime.NewFrame(realtime.TypeOfferClosed, map[string]string{"trip_id": tripID, "reason": reason}))
 }
 
@@ -355,8 +391,12 @@ func (s *Service) withRoadETA(ctx context.Context, c candidate) candidate {
 	if err != nil || open == nil || len(open.Stops) == 0 {
 		return c
 	}
-	if r, err := s.routing.Route(ctx, d.Location, open.Stops[0].Location); err == nil && r.DurationS > 0 {
-		c.DistanceM, c.EtaS = float64(r.DistanceM), r.DurationS
+	from, extra := d.Location, 0
+	if c.Queued { // from the current drop-off, after finishing there
+		from, extra = queuedOrigin(*d), finishingAllowanceS
+	}
+	if r, err := s.routing.Route(ctx, from, open.Stops[0].Location); err == nil && r.DurationS > 0 {
+		c.DistanceM, c.EtaS = float64(r.DistanceM), r.DurationS+extra
 	}
 	return c
 }

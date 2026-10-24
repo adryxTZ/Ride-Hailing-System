@@ -39,17 +39,21 @@ func cancelTermsOf(option json.RawMessage) cancelTerms {
 
 // cancelFeeAt is what the rider pays if they cancel at `now`: nothing before a
 // driver accepts or within the free window after; the fee once the window has
-// passed or the driver is waiting at the pickup.
+// passed or the driver is waiting at the pickup. A queued trip is free to
+// cancel until it becomes current, and its window starts then.
 func cancelFeeAt(t *Trip, now time.Time) decimal.Decimal {
 	c := cancelTermsOf(t.QuoteOption)
 	if !c.Fee.IsPositive() {
 		return decimal.Zero
 	}
+	if t.QueuedAfter != nil && t.Status == Accepted {
+		return decimal.Zero // the driver is still finishing the trip ahead
+	}
 	switch t.Status {
 	case ArrivedAtPickup:
 		return c.Fee
 	case Accepted, EnRouteToPickup:
-		if acc := t.Timestamps["accepted_at"]; acc != nil && now.Sub(*acc) > time.Duration(c.FreeS)*time.Second {
+		if acc := freeCancelFrom(t); acc != nil && now.Sub(*acc) > time.Duration(c.FreeS)*time.Second {
 			return c.Fee
 		}
 	}

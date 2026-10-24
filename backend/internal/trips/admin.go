@@ -226,6 +226,9 @@ func (s *Service) AdminCancel(ctx context.Context, staffID, id, reason string) (
 		if _, err := s.store.appendEvent(ctx, tx, id, "trip.cancelled_by_staff", "STAFF", &staffID, map[string]any{"status": CancelledByStaff, "reason": reason}); err != nil {
 			return err
 		}
+		if _, err := s.promoteQueuedTx(ctx, tx, id); err != nil { // the driver's next trip becomes current
+			return err
+		}
 		return audit.Record(ctx, tx, s.store.brandID, staffID, "trip.cancel", "trip:"+id, reason, map[string]any{"from": t.Status})
 	})
 	if err != nil {

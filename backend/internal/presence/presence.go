@@ -46,6 +46,11 @@ type Driver struct {
 	TripID    string        `json:"trip_id,omitempty"`
 	RiderID   string        `json:"rider_id,omitempty"`
 	At        time.Time     `json:"at"`
+	// Trip queue (queue.go): the current trip is finishing, where it ends, and
+	// the next trip offered to or accepted by the driver meanwhile.
+	Finishing    bool           `json:"finishing"`
+	Dropoff      *routing.Point `json:"dropoff,omitempty"`
+	QueuedTripID string         `json:"queued_trip_id,omitempty"`
 }
 
 // Capabilities declared when going online.
@@ -71,10 +76,12 @@ type PingHook func(ctx context.Context, driverID string, prev *Ping, cur Ping)
 var ErrNotOnline = apperr.New("DRIVER_NOT_ONLINE", http.StatusConflict, "")
 
 type Service struct {
-	r      *redis.Client
-	brand  string
-	now    func() time.Time
-	onPing PingHook
+	r         *redis.Client
+	brand     string
+	now       func() time.Time
+	onPing    PingHook
+	onOffline []OfflineHook
+	onOnline  []OnlineHook
 }
 
 // OnPing sets the hook every accepted ping goes through.
@@ -87,10 +94,17 @@ func (s *Service) geoKey(service string) string { return "geo:" + s.brand + ":" 
 func (s *Service) seenKey() string              { return "seen:" + s.brand } // zset driver → last ping
 
 // Online creates the presence record (fresh immediately) and indexes the cell.
+// The online hooks then restore a trip the driver is still on (queue.go).
 func (s *Service) Online(ctx context.Context, driverID string, p Ping, caps Capabilities) (*Driver, error) {
 	d, err := s.write(ctx, driverID, p, &caps, nil)
 	if err == nil && s.onPing != nil {
 		s.onPing(ctx, driverID, nil, s.stamped(p))
+	}
+	if err == nil && len(s.onOnline) > 0 {
+		for _, h := range s.onOnline {
+			h(ctx, driverID)
+		}
+		return s.Get(ctx, driverID)
 	}
 	return d, err
 }
@@ -138,20 +152,37 @@ func (s *Service) SetState(ctx context.Context, driverID string, st State, tripI
 	if err != nil || n == 0 {
 		return err
 	}
-	return s.r.HSet(ctx, s.key(driverID), map[string]any{"state": string(st), "trip": tripID, "rider": riderID}).Err()
+	fields := map[string]any{"state": string(st), "trip": tripID, "rider": riderID}
+	for k, v := range clearedQueueFields() { // a new state starts without a finishing trip or a queued one
+		fields[k] = v
+	}
+	return s.r.HSet(ctx, s.key(driverID), fields).Err()
 }
 
-// Offline removes the driver from presence and its cell.
+// Offline removes the driver from presence and its cell, then tells the
+// offline hooks what the record held (dispatch releases a queued trip).
 func (s *Service) Offline(ctx context.Context, driverID string) error {
-	services, _ := s.r.HGet(ctx, s.key(driverID), "services").Result()
+	d, err := s.Get(ctx, driverID)
+	if err != nil {
+		return err
+	}
 	pipe := s.r.TxPipeline()
 	pipe.Del(ctx, s.key(driverID))
 	pipe.ZRem(ctx, s.seenKey(), driverID)
-	for _, svc := range split(services) {
-		pipe.ZRem(ctx, s.geoKey(svc), driverID)
+	if d != nil {
+		for _, svc := range d.Services {
+			pipe.ZRem(ctx, s.geoKey(svc), driverID)
+		}
 	}
-	_, err := pipe.Exec(ctx)
-	return err
+	if _, err := pipe.Exec(ctx); err != nil {
+		return err
+	}
+	if d != nil {
+		for _, h := range s.onOffline {
+			h(ctx, *d)
+		}
+	}
+	return nil
 }
 
 // Get returns the record, or nil when the driver is not online.
@@ -268,6 +299,9 @@ func (s *Service) write(ctx context.Context, driverID string, p Ping, caps *Capa
 		fields["state"] = string(Idle)
 		fields["trip"] = ""
 		fields["rider"] = ""
+		for k, v := range clearedQueueFields() {
+			fields[k] = v
+		}
 	}
 	pipe := s.r.TxPipeline()
 	pipe.HSet(ctx, s.key(driverID), fields)
@@ -290,6 +324,7 @@ func fromHash(id string, m map[string]string) *Driver {
 	d.Services = split(m["services"])
 	d.Classes = split(m["classes"])
 	d.Areas = split(m["areas"])
+	queueFromHash(d, m)
 	return d
 }
 

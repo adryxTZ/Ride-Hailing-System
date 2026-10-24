@@ -3,6 +3,7 @@
 // sent to the same driver) → rider cancels; then a second booking → accept → the driver walks
 // the trip to COMPLETED while the rider's socket receives every trip.updated.
 // Run: API=http://localhost:8080/v1 node tools/e2e-dispatch.mjs
+// Another stack: NEXA_DATABASE_URL / NEXA_REDIS_URL (driver provisioning) and PG_DB (clock tweaks) follow API.
 const API = process.env.API ?? "http://localhost:8080/v1";
 const WS = API.replace(/^http/, "ws") + "/ws";
 const RIDER = "+255626512332", DRIVER = "+255715123702";
@@ -15,7 +16,7 @@ import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 execFileSync(fileURLToPath(new URL("../../backend/bin/nexa", import.meta.url)),
   ["driver", "provision", "+255715123702", "--service", SERVICE, "--class", CLASS, "--plate", "T123ABC", "--name", "Adrian Mvungi"],
-  { cwd: fileURLToPath(new URL("../../backend/", import.meta.url)), env: { ...process.env, NEXA_BRAND: "nexa", NEXA_DATABASE_URL: "postgres://nexa:nexa@localhost:5433/nexa?sslmode=disable", NEXA_REDIS_URL: "redis://localhost:6380/0", NEXA_LOG_LEVEL: "warn" }, stdio: "inherit" });
+  { cwd: fileURLToPath(new URL("../../backend/", import.meta.url)), env: { ...process.env, NEXA_BRAND: "nexa", NEXA_DATABASE_URL: process.env.NEXA_DATABASE_URL ?? "postgres://nexa:nexa@localhost:5433/nexa?sslmode=disable", NEXA_REDIS_URL: process.env.NEXA_REDIS_URL ?? "redis://localhost:6380/0", NEXA_LOG_LEVEL: "warn" }, stdio: "inherit" });
 const PICKUP = { lat: -6.7764, lng: 39.229 }, DROPOFF = { lat: -6.7724, lng: 39.2181 };
 const log = (m) => console.log(new Date().toISOString().slice(11, 19), m);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -109,7 +110,7 @@ while (next) {
   next = t.allowed_transitions.find((s) => !s.startsWith("CANCELLED"));
   // Pretend the driver waited 6 minutes at the pickup: the ride start adds the waiting fee.
   if (to === "ARRIVED_AT_PICKUP") {
-    execFileSync("docker", ["exec", "nexa-local-postgres-1", "psql", "-U", "nexa", "-qtAc",
+    execFileSync("docker", ["exec", "nexa-local-postgres-1", "psql", "-U", "nexa", "-d", process.env.PG_DB ?? "nexa", "-qtAc",
       `update trips set arrived_pickup_at = now() - interval '6 minutes' where id='${trip.id}'`]);
   }
   if (to === "IN_TRANSIT") {

@@ -156,6 +156,7 @@ func New(d Deps) http.Handler {
 		mountAccounts(v1, d)
 		mountLegal(v1, d)
 		mountApprovals(v1, d)
+		mountDispatchSettings(v1, d)
 	})
 
 	mountSharePage(r, d) // public live-trip page at /share/{token}

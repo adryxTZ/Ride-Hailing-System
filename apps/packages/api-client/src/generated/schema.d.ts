@@ -861,7 +861,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Accept a ride offer (atomic; a late or second accept gets 404/409) */
+        /**
+         * Accept a ride offer (atomic; a late or second accept gets 404/409)
+         * @description A driver still finishing a trip gets a queued offer (queued = true) as their next trip: the trip is ACCEPTED with queued = true and starts only after the current trip ends (NEXT_TRIP_ALREADY_QUEUED when one is already queued).
+         */
         post: operations["acceptOffer"];
         delete?: never;
         options?: never;
@@ -895,6 +898,23 @@ export interface paths {
         };
         /** The driver's assigned, unfinished trip or null */
         get: operations["getDriverActiveTrip"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/driver/trips/next": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The trip queued after the driver's current one (accepted while finishing), or null */
+        get: operations["getDriverNextTrip"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1002,7 +1022,7 @@ export interface paths {
         put?: never;
         /**
          * Move the assigned trip one step (must be in allowed_transitions)
-         * @description CANCELLED_BY_DRIVER before the ride starts sends the trip back to matching; with reason rider_no_show (after the no-show wait at the pickup) it ends the trip and charges the cancellation fee.
+         * @description CANCELLED_BY_DRIVER before the ride starts sends the trip back to matching; with reason rider_no_show (after the no-show wait at the pickup) it ends the trip and charges the cancellation fee. A queued next trip cannot move to EN_ROUTE_TO_PICKUP until the current trip ends (NEXT_TRIP_WAITING); completing the current trip makes the queued one current.
          */
         post: operations["transitionTrip"];
         delete?: never;
@@ -2838,6 +2858,40 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/admin/dispatch/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Each country's dispatch settings in the staff member's scope (dispatch.manage) */
+        get: operations["listDispatchSettings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/dispatch/settings/{country}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Change a country's trip-queue settings (audited; REASON_REQUIRED, COUNTRY_UNKNOWN, FINISHING_STATUSES_INVALID) */
+        patch: operations["setDispatchSettings"];
         trace?: never;
     };
     "/admin/compliance/regulator": {
@@ -4759,6 +4813,32 @@ export interface components {
             trip_distance_m?: number;
             /** @description Stops between pickup and drop-off */
             stops_count?: number;
+            /** @description The driver is finishing a trip: this is their next trip, starting after the current one (pickup_eta_s includes the finishing time) */
+            queued?: boolean;
+        };
+        /** @description The driver's queued next trip, as the "Next trip" banner shows it */
+        NextTrip: {
+            /** Format: uuid */
+            trip_id: string;
+            code: string;
+            pickup: components["schemas"]["OfferStop"];
+            rider_first_name?: string;
+            /** @description From the current trip's drop-off */
+            pickup_distance_m: number;
+            /** @description Promised pickup time from now */
+            pickup_eta_s?: number;
+        };
+        DispatchSettings: {
+            country: string;
+            /** @description Offer the next trip while a driver is finishing (default on) */
+            trip_queue_enabled: boolean;
+            /** @description Trip statuses that count as finishing (default ARRIVED_AT_DROPOFF, AWAITING_PAYMENT) */
+            finishing_statuses: ("IN_TRANSIT" | "ARRIVED_AT_DROPOFF" | "AWAITING_PAYMENT")[];
+            /**
+             * Format: date-time
+             * @description Absent while the defaults apply
+             */
+            updated_at?: string;
         };
         NearbyVehicle: {
             location: components["schemas"]["Point"];
@@ -4809,6 +4889,11 @@ export interface components {
              * @description Last ping (server time)
              */
             at: string;
+            /** @description The current trip is in a finishing status (trip queue) */
+            finishing?: boolean;
+            dropoff?: components["schemas"]["Point"];
+            /** @description The next trip offered to or accepted by the driver while finishing */
+            queued_trip_id?: string;
         };
         DriverStatus: {
             online: boolean;
@@ -5858,6 +5943,10 @@ export interface components {
              */
             payment_status?: "DUE" | "PENDING" | "FAILED" | "COLLECTED" | "CASH_CONFIRMED";
             payment?: components["schemas"]["TripPayment"];
+            /** @description The assigned driver is finishing another trip nearby; this one starts after it (no start button until then) */
+            queued?: boolean;
+            /** @description While queued: the pickup estimate in seconds, finishing time included */
+            queued_pickup_eta_s?: number;
         };
         /** @description One immutable receipt per completed trip; lines add up to the total. */
         Receipt: {
@@ -7458,6 +7547,28 @@ export interface operations {
                 content: {
                     "application/json": {
                         trip?: components["schemas"]["Trip"] | null;
+                    };
+                };
+            };
+        };
+    };
+    getDriverNextTrip: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Next trip */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        next_trip?: components["schemas"]["NextTrip"] | null;
                     };
                 };
             };
@@ -11185,6 +11296,62 @@ export interface operations {
             400: components["responses"]["Error"];
             403: components["responses"]["Error"];
             409: components["responses"]["Error"];
+        };
+    };
+    listDispatchSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Settings per country */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["DispatchSettings"][];
+                    };
+                };
+            };
+            403: components["responses"]["Error"];
+        };
+    };
+    setDispatchSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                country: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    trip_queue_enabled?: boolean;
+                    finishing_statuses?: ("IN_TRANSIT" | "ARRIVED_AT_DROPOFF" | "AWAITING_PAYMENT")[];
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The country's settings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DispatchSettings"];
+                };
+            };
+            400: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
         };
     };
     listRegulatorStatus: {

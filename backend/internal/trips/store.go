@@ -126,7 +126,8 @@ const tripColumns = `
 	t.requested_at, t.offered_at, t.accepted_at, t.en_route_at, t.arrived_pickup_at, t.in_transit_at,
 	t.arrived_dropoff_at, t.awaiting_payment_at, t.completed_at, t.cancelled_at, t.cancel_reason,
 	ru.full_name, ru.phone, du.full_name, du.phone, t.fees, t.contacts, t.scheduled_for, t.adjustments, t.cancellation_fee,
-	t.country_code, ar.id, ar.code, ar.name, t.payment_status, t.payment_ref, t.cash_chosen`
+	t.country_code, ar.id, ar.code, ar.name, t.payment_status, t.payment_ref, t.cash_chosen,
+	t.queued_after, t.queued_pickup_by, t.queue_promoted_at`
 
 // tripFrom joins the people on the trip; every trip query selects from it.
 const tripFrom = ` FROM trips t JOIN users ru ON ru.id = t.rider_id LEFT JOIN users du ON du.id = t.driver_id
@@ -145,7 +146,8 @@ func scanTrip(row pgx.Row) (*Trip, error) {
 		&t.PricingSource, &t.EstimatedFare, &t.FinalFare, &t.Currency, &t.PaymentMethod, &t.RouteDistanceM, &t.RouteDurationS, &t.Notes, &t.Seq,
 		&t.RequestedAt, &ts[0], &ts[1], &ts[2], &ts[3], &ts[4], &ts[5], &ts[6], &ts[7], &ts[8], &t.CancelReason,
 		&riderName, &riderPhone, &driverName, &driverPhone, &t.Fees, &contacts, &t.ScheduledFor, &adjustments, &t.CancellationFee,
-		&t.Country, &areaID, &areaCode, &areaName, &t.PaymentStatus, &t.PaymentRef, &t.cashChosen)
+		&t.Country, &areaID, &areaCode, &areaName, &t.PaymentStatus, &t.PaymentRef, &t.cashChosen,
+		&t.QueuedAfter, &t.queuedPickupBy, &t.queuePromotedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
@@ -179,6 +181,7 @@ func scanTrip(row pgx.Row) (*Trip, error) {
 		t.AllowedNext = []Status{}
 	}
 	t.FeesView = feesView(t.Fees)
+	applyQueue(&t, time.Now())
 	return &t, nil
 }
 
@@ -319,8 +322,9 @@ func statusStrings(in []Status) []string {
 
 func (s store) activeForDriver(ctx context.Context, driverID string) (*Trip, error) {
 	var id string
-	err := s.pool.QueryRow(ctx, `SELECT id FROM trips WHERE driver_id=$1 AND brand_id=$2 AND status = ANY($3::trip_status[]) ORDER BY created_at DESC LIMIT 1`,
-		driverID, s.brandID, statusStrings(ActiveStatuses)).Scan(&id)
+	// The current trip only: a queued next trip waits until this one ends.
+	err := s.pool.QueryRow(ctx, `SELECT id FROM trips WHERE driver_id=$1 AND brand_id=$2 AND status = ANY($3::trip_status[]) AND queued_after IS NULL
+		ORDER BY created_at DESC LIMIT 1`, driverID, s.brandID, statusStrings(ActiveStatuses)).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
@@ -333,7 +337,7 @@ func (s store) activeForDriver(ctx context.Context, driverID string) (*Trip, err
 // openRequests lists trips waiting for a driver with no open offer, oldest first.
 func (s store) openRequests(ctx context.Context, limit int) ([]OpenRequest, error) {
 	rows, err := s.pool.Query(ctx, `
-		SELECT t.id, t.rider_id, t.service_key, t.vehicle_class_key, coalesce(t.area_id::text, ''), ST_Y(st.location::geometry), ST_X(st.location::geometry), t.requested_at
+		SELECT t.id, t.rider_id, t.service_key, t.vehicle_class_key, coalesce(t.area_id::text, ''), t.country_code, ST_Y(st.location::geometry), ST_X(st.location::geometry), t.requested_at
 		FROM trips t JOIN trip_stops st ON st.trip_id = t.id AND st.seq = 1
 		WHERE t.brand_id=$1 AND t.status='REQUESTED' AND t.dispatch_window_ends_at > now()
 		ORDER BY t.requested_at LIMIT $2`, s.brandID, limit)
@@ -344,7 +348,7 @@ func (s store) openRequests(ctx context.Context, limit int) ([]OpenRequest, erro
 	out := []OpenRequest{}
 	for rows.Next() {
 		var r OpenRequest
-		if err := rows.Scan(&r.TripID, &r.RiderID, &r.ServiceKey, &r.VehicleClass, &r.AreaID, &r.Pickup.Lat, &r.Pickup.Lng, &r.RequestedAt); err != nil {
+		if err := rows.Scan(&r.TripID, &r.RiderID, &r.ServiceKey, &r.VehicleClass, &r.AreaID, &r.Country, &r.Pickup.Lat, &r.Pickup.Lng, &r.RequestedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, r)

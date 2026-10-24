@@ -189,5 +189,8 @@
   "APPROVAL_NOT_REQUESTER": "Only the person who asked can withdraw this request.",
   "APPROVAL_NOTE_REQUIRED": "Add a note (up to 1000 characters).",
   "APPROVAL_WORKFLOW_INVALID": "The workflow has problems; fix them and save again.",
-  "APPROVAL_ACTION_UNAVAILABLE": "This action is no longer available."
+  "APPROVAL_ACTION_UNAVAILABLE": "This action is no longer available.",
+  "NEXT_TRIP_WAITING": "Finish your current trip first. This one starts after it.",
+  "NEXT_TRIP_ALREADY_QUEUED": "You already have a next trip.",
+  "FINISHING_STATUSES_INVALID": "Choose at least one finishing status: in transit, at the drop-off or collecting payment."
 }

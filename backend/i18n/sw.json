@@ -189,5 +189,8 @@
   "APPROVAL_NOT_REQUESTER": "Aliyeomba pekee ndiye anaweza kuondoa ombi hili.",
   "APPROVAL_NOTE_REQUIRED": "Ongeza maelezo (hadi herufi 1000).",
   "APPROVAL_WORKFLOW_INVALID": "Mtiririko una makosa; yarekebishe kisha uhifadhi tena.",
-  "APPROVAL_ACTION_UNAVAILABLE": "Kitendo hiki hakipatikani tena."
+  "APPROVAL_ACTION_UNAVAILABLE": "Kitendo hiki hakipatikani tena.",
+  "NEXT_TRIP_WAITING": "Maliza safari yako ya sasa kwanza. Hii itaanza baada yake.",
+  "NEXT_TRIP_ALREADY_QUEUED": "Tayari una safari inayofuata.",
+  "FINISHING_STATUSES_INVALID": "Chagua angalau hali moja ya kumaliza: safarini, mwisho wa safari au kupokea malipo."
 }

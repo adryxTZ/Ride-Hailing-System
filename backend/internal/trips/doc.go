@@ -10,6 +10,8 @@
 //     ends, cash only when no prompt is open, the read model both apps show
 //   - payment_ops.go  what the payments module and the rider do to a fare:
 //     FareFor, FarePendingTx, FareFailed, ChooseCash, CompletePaidTx
+//   - queue.go      the trip queue: a finishing driver's next trip (AssignNext,
+//     promotion when the trip ahead ends, the start gate, release on offline)
 //
 // Dispatch (offers, matching) and realtime fan-out consume trip_events; they
 // never mutate a trip except through this package.
