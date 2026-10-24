@@ -22,6 +22,7 @@ import {
   Tag,
   UserCog,
   Users,
+  Waypoints,
   Wrench,
 } from "lucide-react";
 
@@ -101,7 +102,10 @@ export const NAV_GROUPS: NavGroup[] = [
     title: "Settings",
     collapsible: true,
     icon: Settings,
-    items: [{ href: "/settings/branding", label: "Branding", icon: Palette }],
+    items: [
+      { href: "/settings/branding", label: "Branding", icon: Palette },
+      { href: "/settings/dispatch", label: "Dispatch", icon: Waypoints },
+    ],
   },
 ];
 

@@ -99,8 +99,12 @@ func (s *Service) withPrompt(ctx context.Context, t *Trip) *Trip {
 // registration order; any error aborts the completion.
 func (s *Service) OnCompletedTx(h CompletedTxHook) { s.onCompletedTx = append(s.onCompletedTx, h) }
 
-// completedTx runs the completion hooks for a just-completed trip.
+// completedTx runs the completion hooks for a just-completed trip, after
+// promoting the driver's queued next trip (queue.go) in the same transaction.
 func (s *Service) completedTx(ctx context.Context, tx pgx.Tx, t *Trip) error {
+	if _, err := s.promoteQueuedTx(ctx, tx, t.ID); err != nil {
+		return err
+	}
 	for _, h := range s.onCompletedTx {
 		if err := h(ctx, tx, t); err != nil {
 			return err

@@ -24,6 +24,7 @@ import { fareView } from "@/models/farePayment";
 import { clockIn, formatMoney } from "@/models/format";
 import { distanceKm } from "@/models/geo";
 import { receiptLines } from "@/models/receipt";
+import { FINISHING_HEADLINE, finishingEtaText, isFinishingDriver } from "@/models/tripQueue";
 import { mmss, waitingState } from "@/models/waiting";
 import { useBookingStore } from "@/services/bookingStore";
 import { localized } from "@/services/catalog";
@@ -75,6 +76,8 @@ export function TripStatusBlock({ trip, phase, looking, etaS, onCancel }: Props)
 
   switch (phase) {
     case "assigned":
+      // The driver is finishing a trip nearby and comes next (trip queue).
+      if (trip && isFinishingDriver(trip)) return card(FINISHING_HEADLINE, finishingEtaText(trip));
       return card(
         "Pickup in",
         etaS != null

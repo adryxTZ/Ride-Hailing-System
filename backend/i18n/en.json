@@ -171,5 +171,8 @@
   "PAYMENT_IN_PROGRESS": "A payment is being taken for this trip. Try again in a minute.",
   "PRICE_BELOW_FIXED_PARTS": "The price can't be lower than the booking fee and the fixed charges.",
   "TRIP_NOT_REFUNDABLE": "Only a completed, paid trip can be refunded.",
-  "REFUND_TOO_LARGE": "That is more than what is left to refund on this trip."
+  "REFUND_TOO_LARGE": "That is more than what is left to refund on this trip.",
+  "NEXT_TRIP_WAITING": "Finish your current trip first. This one starts after it.",
+  "NEXT_TRIP_ALREADY_QUEUED": "You already have a next trip.",
+  "FINISHING_STATUSES_INVALID": "Choose at least one finishing status: in transit, at the drop-off or collecting payment."
 }

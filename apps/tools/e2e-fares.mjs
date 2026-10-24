@@ -9,15 +9,16 @@
 // Fake outcomes by the last 4 digits of the prompted number: 0001 insufficient,
 // 0002 rejected, 0003 never answered, anything else collected.
 // Run: node tools/e2e-fares.mjs  (API on :8080 with the fake gateway; Docker Postgres for clock tweaks)
+// Another stack: API=http://localhost:8094/v1 PG_DB=<its database>.
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 if (!process.env.STAFF_EMAIL || !process.env.STAFF_PASSWORD) throw new Error("Needs STAFF_EMAIL and STAFF_PASSWORD (a staff account on the local stack)");
 
-const api = "http://localhost:8080/v1";
+const api = process.env.API ?? "http://localhost:8080/v1";
 const log = (m) => console.log(new Date().toISOString().slice(11, 19), m);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const psql = (sql) =>
-  execFileSync("docker", ["exec", "nexa-local-postgres-1", "psql", "-U", "nexa", "-qtAc", sql], { stdio: ["ignore", "pipe", "pipe"] }).toString().trim();
+  execFileSync("docker", ["exec", "nexa-local-postgres-1", "psql", "-U", "nexa", "-d", process.env.PG_DB ?? "nexa", "-qtAc", sql], { stdio: ["ignore", "pipe", "pipe"] }).toString().trim();
 const fail = (m) => { throw new Error(m); };
 
 async function call(method, path, token, body, expect, headers = {}) {

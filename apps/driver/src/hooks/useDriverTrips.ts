@@ -7,6 +7,8 @@ import { appendMessage } from "@platform/chat";
 import { type RealtimeFrame, useRealtime } from "@platform/realtime";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { chatKey } from "@/hooks/useChat";
+import { NEXT_TRIP_KEY } from "@/hooks/useNextTrip";
+import { isQueuedTrip } from "@/models/tripQueue";
 import type { ChatPage, Message } from "@/services/messaging";
 import { freshToken, REALTIME_URL } from "@/services/realtime";
 import {
@@ -54,9 +56,12 @@ export function useDriverRealtime() {
         qc.setQueryData<Offer | null>(OFFER_KEY, (o) => (o?.trip_id === closed ? null : o));
       } else if (f.type === "trip.updated") {
         const t = f.data as Trip;
+        void qc.invalidateQueries({ queryKey: NEXT_TRIP_KEY });
+        // The queued next trip never replaces the current one; it arrives un-queued once current.
+        if (isQueuedTrip(t)) return;
         // A trip that ended, or went back to matching after this driver cancelled, leaves the screen.
         const mine = !TERMINAL.includes(t.status) && t.status !== "REQUESTED" && t.status !== "OFFERED";
-        qc.setQueryData(TRIP_KEY, mine ? t : null);
+        qc.setQueryData<Trip | null>(TRIP_KEY, (cur) => (mine ? t : cur && cur.id !== t.id ? cur : null));
         if (t.status === "COMPLETED") qc.setQueryData(RATE_KEY, t);
       } else if (f.type === "wallet.updated") {
         // Balance, holds or a payment changed: re-read the wallet and the online status (holds gate it).
@@ -105,7 +110,9 @@ export function useAcceptOffer() {
     },
     onSuccess: (t) => {
       qc.setQueryData(OFFER_KEY, null);
-      qc.setQueryData(TRIP_KEY, t);
+      // A queued next trip waits behind the current one: only the banner learns of it.
+      if (isQueuedTrip(t)) void qc.invalidateQueries({ queryKey: NEXT_TRIP_KEY });
+      else qc.setQueryData(TRIP_KEY, t);
     },
     onError: () => void qc.invalidateQueries({ queryKey: OFFER_KEY }),
   });
@@ -125,8 +132,15 @@ export function useTransition() {
     mutationFn: ({ id, to, reason }: { id: string; to: TripStatus; reason?: "rider_no_show" }) =>
       transitionTrip(id, to, reason),
     onSuccess: (t) => {
-      qc.setQueryData(TRIP_KEY, TERMINAL.includes(t.status) || t.status === "REQUESTED" ? null : t);
+      const ended = TERMINAL.includes(t.status) || t.status === "REQUESTED";
+      const current = qc.getQueryData<Trip | null>(TRIP_KEY);
+      // A step on the queued next trip (e.g. cancelling it) leaves the current trip alone.
+      if (isQueuedTrip(t) || (current && current.id !== t.id))
+        return void qc.invalidateQueries({ queryKey: NEXT_TRIP_KEY });
+      qc.setQueryData(TRIP_KEY, ended ? null : t);
       if (t.status === "COMPLETED") qc.setQueryData(RATE_KEY, t);
+      // A queued next trip becomes current when this one ends: read it back.
+      if (ended) void qc.invalidateQueries({ queryKey: TRIP_KEY });
     },
   });
 }

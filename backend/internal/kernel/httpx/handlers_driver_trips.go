@@ -12,7 +12,6 @@ import (
 	"github.com/kalen-limited/hauler-rider/backend/internal/money"
 	"github.com/kalen-limited/hauler-rider/backend/internal/payments"
 	"github.com/kalen-limited/hauler-rider/backend/internal/payouts"
-	"github.com/kalen-limited/hauler-rider/backend/internal/presence"
 	"github.com/kalen-limited/hauler-rider/backend/internal/trips"
 )
 
@@ -25,6 +24,7 @@ func mountDriverTrips(r chi.Router, d Deps) {
 		g.Post("/driver/offers/{tripId}/accept", h.accept)
 		g.Post("/driver/offers/{tripId}/decline", h.decline)
 		g.Get("/driver/trips/active", h.active)
+		g.Get("/driver/trips/next", h.next)
 		g.Get("/driver/trips", h.list)
 		g.Get("/driver/wallet", h.wallet)
 		g.Post("/driver/trips/{id}/transitions", h.transition)
@@ -157,7 +157,8 @@ func (h driverTripHandlers) transition(w http.ResponseWriter, req *http.Request)
 		return
 	}
 	if body.To == trips.CancelledByDriver || trips.IsTerminal(t.Status) {
-		_ = h.deps.Presence.SetState(req.Context(), driverID, presence.Idle, "", "")
+		// Back to IDLE, or on to the queued next trip (idempotent with the trip listener).
+		h.deps.Dispatch.DriverLeftTrip(req.Context(), driverID, t.ID)
 	}
 	writeJSON(w, http.StatusOK, t)
 }

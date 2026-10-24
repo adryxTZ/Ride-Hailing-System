@@ -147,6 +147,7 @@ func New(d Deps) http.Handler {
 		mountPrivacy(v1, d)
 		mountTripMoney(v1, d)
 		mountGeofences(v1, d)
+		mountDispatchSettings(v1, d)
 	})
 
 	mountSharePage(r, d) // public live-trip page at /share/{token}

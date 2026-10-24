@@ -42,6 +42,9 @@ type Offer struct {
 	PickupEtaS     int             `json:"pickup_eta_s"`
 	TripDistanceM  *int            `json:"trip_distance_m,omitempty"`
 	StopsCount     int             `json:"stops_count"` // stops between pickup and drop-off
+	// Queued: the driver is finishing a trip; this one starts after it ends
+	// (the app labels it "Next trip"). PickupEtaS includes the finishing time.
+	Queued bool `json:"queued"`
 }
 
 type OfferStop struct {

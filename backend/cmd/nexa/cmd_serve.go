@@ -129,6 +129,7 @@ func runServe(args []string) error {
 	wireCancellationMoney(tripSvc, ledger)
 	presenceSvc := presenceService(bs)
 	hub, dispatcher := startRealtimeAndDispatch(ctx, bs, roles, tripSvc, presenceSvc, router)
+	startTripQueue(bs, brandID, dispatcher, presenceSvc)
 	messagingSvc := startMessaging(bs, brandID, tripSvc, hub, dispatcher)
 	surgeSvc := startSurge(bs, tripSvc, presenceSvc, dispatcher, priceSvc)
 	files := fileStore(bs)
@@ -307,12 +308,13 @@ func startRealtimeAndDispatch(ctx context.Context, bs *bootstrap, roles map[stri
 	hub := realtime.NewHub(bs.redis, bs.brand.Code)
 	d := dispatch.New(bs.pool, bs.redis, bs.brand.Code, t, p, hub, router)
 	t.OnChanged(func(ctx context.Context, trip *trips.Trip) {
-		d.TripChanged(ctx, trip)
 		frame := realtime.NewFrame(realtime.TypeTripUpdated, trip)
 		hub.Publish(ctx, trip.RiderID, frame)
 		if trip.DriverID != nil {
 			hub.Publish(ctx, *trip.DriverID, frame)
 		}
+		// After the frame: a promoted next trip (trip queue) reaches the driver after the one that ended.
+		d.TripChanged(ctx, trip)
 	})
 	if roles["realtime"] || roles["api"] {
 		go hub.Run(ctx)

@@ -171,5 +171,8 @@
   "PAYMENT_IN_PROGRESS": "Malipo ya safari hii yanachukuliwa. Jaribu tena baada ya dakika moja.",
   "PRICE_BELOW_FIXED_PARTS": "Bei haiwezi kuwa chini ya ada ya kuagiza na tozo zisizobadilika.",
   "TRIP_NOT_REFUNDABLE": "Safari iliyokamilika na kulipwa pekee ndiyo inaweza kurudishiwa pesa.",
-  "REFUND_TOO_LARGE": "Kiasi hicho ni zaidi ya kilichobaki kurudishwa kwenye safari hii."
+  "REFUND_TOO_LARGE": "Kiasi hicho ni zaidi ya kilichobaki kurudishwa kwenye safari hii.",
+  "NEXT_TRIP_WAITING": "Maliza safari yako ya sasa kwanza. Hii itaanza baada yake.",
+  "NEXT_TRIP_ALREADY_QUEUED": "Tayari una safari inayofuata.",
+  "FINISHING_STATUSES_INVALID": "Chagua angalau hali moja ya kumaliza: safarini, mwisho wa safari au kupokea malipo."
 }

@@ -16,6 +16,7 @@ import { CarMarker } from "@/components/home/CarMarker";
 import { DriverMap } from "@/components/home/DriverMap";
 import { HoldPanel } from "@/components/home/HoldPanel";
 import { NavBanner } from "@/components/home/NavBanner";
+import { NextTripBanner } from "@/components/home/NextTripBanner";
 import { OfferCard } from "@/components/home/OfferCard";
 import { OfflinePanel } from "@/components/home/OfflinePanel";
 import { OnlinePanel } from "@/components/home/OnlinePanel";
@@ -37,6 +38,7 @@ import {
 } from "@/hooks/useDriverTrips";
 import { useMyVehicle } from "@/hooks/useMyVehicle";
 import { useNavigation } from "@/hooks/useNavigation";
+import { useNextTrip } from "@/hooks/useNextTrip";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { useOnlineTimer } from "@/hooks/useOnlineTimer";
 import { useDriverStatus, useLocationStream, useSetStatus } from "@/hooks/usePresence";
@@ -44,6 +46,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { useRoute } from "@/hooks/useRoute";
 import { decodePolyline } from "@/models/geo";
 import { progress } from "@/models/onboarding";
+import { showsNextTrip } from "@/models/tripQueue";
 import { isDriving, stepFor } from "@/models/tripSteps";
 import { mainHold } from "@/models/wallet";
 import type { Point } from "@/services/presence";
@@ -118,7 +121,10 @@ export function HomeScreen() {
         ]}
       >
         <View style={[styles.grabber, { backgroundColor: palette.border }]} />
-        {work.trip ? (
+        {work.trip && showsNextTrip(work.trip) && work.next ? (
+          <NextTripBanner next={work.next} onCancel={work.cancelNext} />
+        ) : null}
+        {work.trip && !work.offer?.queued ? (
           <TripPanel
             trip={work.trip}
             busy={work.stepping}
@@ -189,16 +195,21 @@ function useWork() {
   const accept = useAcceptOffer();
   const decline = useDeclineOffer();
   const transition = useTransition();
+  const { data: next } = useNextTrip(!!trip);
   const error = (accept.error ?? transition.error)?.message;
   return {
     offer: offer ?? undefined,
     trip: trip ?? undefined,
+    /** The trip accepted while finishing this one (banner). */
+    next: next ?? undefined,
     answering: accept.isPending || decline.isPending,
     stepping: transition.isPending,
     error,
     accept: () => offer && accept.mutate(offer.trip_id),
     decline: () => offer && decline.mutate(offer.trip_id),
     step: (to: TripStatus) => trip && transition.mutate({ id: trip.id, to }),
+    /** The driver gives up the queued next trip: it goes back to matching. */
+    cancelNext: () => next && transition.mutate({ id: next.trip_id, to: "CANCELLED_BY_DRIVER" }),
     noShow: () =>
       trip && transition.mutate({ id: trip.id, to: "CANCELLED_BY_DRIVER", reason: "rider_no_show" }),
   };

@@ -113,6 +113,14 @@ type Trip struct {
 	cashChosen bool
 	// DriverLocation is filled by the API layer from live presence (Redis), never stored.
 	DriverLocation *DriverLocation `json:"driver_location,omitempty"`
+	// Trip queue (queue.go): Queued is true while the assigned driver is still
+	// finishing the trip ahead (QueuedAfter, internal); QueuedPickupEtaS is the
+	// pickup estimate including that finishing time.
+	Queued           bool    `json:"queued"`
+	QueuedPickupEtaS *int    `json:"queued_pickup_eta_s,omitempty"`
+	QueuedAfter      *string `json:"-"`
+	queuedPickupBy   *time.Time
+	queuePromotedAt  *time.Time
 }
 
 // Contact is a person at a stop who is not the account holder.
@@ -149,6 +157,7 @@ type OpenRequest struct {
 	ServiceKey   string
 	VehicleClass string
 	AreaID       string // operating area of the pickup ("" for trips before areas existed)
+	Country      string // the trip's country (dispatch settings are per country)
 	Pickup       routing.Point
 	RequestedAt  time.Time
 }

@@ -21,6 +21,7 @@ const (
 	PermSafetyResolve    = "safety.resolve"
 	PermStaffManage      = "staff.manage"
 	PermBrandingManage   = "branding.manage"
+	PermDispatchManage   = "dispatch.manage"
 )
 
 // PermissionPrefix marks permissions inside the token's roles claim ("perm:pricing.edit").
@@ -41,6 +42,7 @@ var Permissions = []Permission{
 	{PermRidersBlock, "Operations", "Block and unblock riders"},
 	{PermDriversReview, "Operations", "Review driver documents, approve, reject, suspend; set driver regions"},
 	{PermSafetyResolve, "Operations", "Close safety (SOS) alerts"},
+	{PermDispatchManage, "Operations", "Change dispatch settings: offering the next trip to drivers finishing one"},
 	{PermPricingEdit, "Pricing", "Change vehicle type prices and fixed fares"},
 	{PermAreasEdit, "Pricing", "Create regions and mark them on the map"},
 	{PermFeesEdit, "Pricing", "Publish fees and tax rules"},

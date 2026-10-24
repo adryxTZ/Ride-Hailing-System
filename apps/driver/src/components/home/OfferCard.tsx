@@ -15,6 +15,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { isPackage } from "@/models/tripSteps";
 import type { Offer } from "@/services/trips";
+import { QueuedOfferTag } from "./QueuedOfferTag";
 
 interface Props {
   offer: Offer;
@@ -31,6 +32,7 @@ export function OfferCard({ offer, busy, onAccept, onDecline }: Props) {
   const pkg = isPackage(offer);
   return (
     <Animated.View entering={FadeInDown.duration(280)} style={styles.wrap}>
+      {offer.queued ? <QueuedOfferTag /> : null}
       <Text style={[styles.hey, { color: palette.success ?? palette.primary }]}>
         {pkg ? `Package delivery for ${name}` : `${name} wants to ride with you`}
       </Text>
@@ -51,7 +53,7 @@ export function OfferCard({ offer, busy, onAccept, onDecline }: Props) {
       </View>
       <View style={styles.stops}>
         <Stop
-          label={`Pickup · ${formatKm(offer.pickup_distance_m)} away`}
+          label={`Pickup · ${formatKm(offer.pickup_distance_m)} ${offer.queued ? "from this drop-off" : "away"}`}
           address={offer.pickup.address}
           dark
         />

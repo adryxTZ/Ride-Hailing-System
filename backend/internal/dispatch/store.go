@@ -38,9 +38,9 @@ func (s store) excluded(ctx context.Context, tripIDs []string) (map[string]map[s
 // insertOffer records a new open offer; false if the driver or trip already has one.
 func (s store) insertOffer(ctx context.Context, tx pgx.Tx, c candidate, expires time.Time) (bool, error) {
 	tag, err := tx.Exec(ctx, `
-		INSERT INTO trip_offers (trip_id, driver_id, wave, distance_m, eta_s, expires_at)
-		VALUES ($1, $2, (SELECT COALESCE(max(wave),0)+1 FROM trip_offers WHERE trip_id=$1), $3, $4, $5)
-		ON CONFLICT DO NOTHING`, c.TripID, c.DriverID, int(c.DistanceM), c.EtaS, expires)
+		INSERT INTO trip_offers (trip_id, driver_id, wave, distance_m, eta_s, expires_at, queued)
+		VALUES ($1, $2, (SELECT COALESCE(max(wave),0)+1 FROM trip_offers WHERE trip_id=$1), $3, $4, $5, $6)
+		ON CONFLICT DO NOTHING`, c.TripID, c.DriverID, int(c.DistanceM), c.EtaS, expires, c.Queued)
 	return err == nil && tag.RowsAffected() == 1, err
 }
 
@@ -51,14 +51,15 @@ type openOffer struct {
 	DistanceM int
 	EtaS      int
 	ExpiresAt time.Time
+	Queued    bool // made to a finishing driver (next trip)
 }
 
 // lockOpen locks the driver's open offer for this trip (accept/decline).
 func (s store) lockOpen(ctx context.Context, tx pgx.Tx, tripID, driverID string) (*openOffer, error) {
 	var o openOffer
-	err := tx.QueryRow(ctx, `SELECT trip_id, driver_id, distance_m, eta_s, expires_at FROM trip_offers
+	err := tx.QueryRow(ctx, `SELECT trip_id, driver_id, distance_m, eta_s, expires_at, queued FROM trip_offers
 		WHERE trip_id=$1 AND driver_id=$2 AND outcome='OFFERED' FOR UPDATE`, tripID, driverID).
-		Scan(&o.TripID, &o.DriverID, &o.DistanceM, &o.EtaS, &o.ExpiresAt)
+		Scan(&o.TripID, &o.DriverID, &o.DistanceM, &o.EtaS, &o.ExpiresAt, &o.Queued)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
@@ -68,9 +69,9 @@ func (s store) lockOpen(ctx context.Context, tx pgx.Tx, tripID, driverID string)
 // openForDriver returns the driver's current open offer, if any (app resume).
 func (s store) openForDriver(ctx context.Context, driverID string) (*openOffer, error) {
 	var o openOffer
-	err := s.pool.QueryRow(ctx, `SELECT trip_id, driver_id, distance_m, eta_s, expires_at FROM trip_offers
+	err := s.pool.QueryRow(ctx, `SELECT trip_id, driver_id, distance_m, eta_s, expires_at, queued FROM trip_offers
 		WHERE driver_id=$1 AND outcome='OFFERED' AND expires_at > now()`, driverID).
-		Scan(&o.TripID, &o.DriverID, &o.DistanceM, &o.EtaS, &o.ExpiresAt)
+		Scan(&o.TripID, &o.DriverID, &o.DistanceM, &o.EtaS, &o.ExpiresAt, &o.Queued)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}

@@ -166,6 +166,9 @@ func (s *Service) TransitionByDriver(ctx context.Context, tripID, driverID strin
 		if t.DriverID == nil || *t.DriverID != driverID {
 			return ErrNotAssigned
 		}
+		if err := s.queueGate(ctx, tx, t, to); err != nil {
+			return err
+		}
 		if to == CancelledByRider || !CanTransition(t.Status, to, t.Lifecycle) {
 			return ErrInvalidTransition
 		}
@@ -243,9 +246,7 @@ func (s *Service) afterCompletedTx(ctx context.Context, tx pgx.Tx, t *Trip) erro
 
 // redispatch puts a driver-cancelled trip back into matching with a fresh window.
 func (s *Service) redispatch(ctx context.Context, tx pgx.Tx, tripID, driverID string) error {
-	if _, err := tx.Exec(ctx, `UPDATE trips SET status='REQUESTED', driver_id=NULL, accepted_at=NULL, en_route_at=NULL, arrived_pickup_at=NULL,
-		redispatch_count = redispatch_count + 1, dispatch_window_ends_at = $2, updated_at=now(), version=version+1 WHERE id=$1`,
-		tripID, s.now().Add(DispatchWindow)); err != nil {
+	if err := s.requeueTx(ctx, tx, tripID); err != nil {
 		return err
 	}
 	_, err := s.store.appendEvent(ctx, tx, tripID, "trip.driver_cancelled", "DRIVER", &driverID, map[string]any{"status": Requested})
