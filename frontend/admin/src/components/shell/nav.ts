@@ -2,9 +2,11 @@
 import {
   BookOpen,
   Car,
+  ClipboardCheck,
   Cpu,
   FileCheck,
   FileClock,
+  GitPullRequestArrow,
   Hexagon,
   KeyRound,
   Landmark,
@@ -48,6 +50,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/", label: "Overview", icon: LayoutGrid },
       { href: "/live", label: "Live map", icon: MapIcon },
       { href: "/trips", label: "Trips", icon: Route },
+      { href: "/approvals", label: "Approvals", icon: ClipboardCheck },
     ],
   },
   {
@@ -109,6 +112,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/settings/branding", label: "Branding", icon: Palette },
       { href: "/settings/legal", label: "Legal", icon: Scale },
+      { href: "/settings/approvals", label: "Approval workflows", icon: GitPullRequestArrow },
     ],
   },
 ];

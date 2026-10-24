@@ -178,5 +178,16 @@
   "PAYMENT_AMOUNT_MISMATCH": "Kiasi lazima kilingane na marejesho yanayolipwa kikamilifu.",
   "REFUND_NOT_OWED": "Mojawapo ya marejesho hayo tayari limelipwa au halijapatikana.",
   "LEGAL_DOCUMENT_NOT_FOUND": "Hati hiyo ya kisheria haipo au bado haijachapishwa.",
-  "LEGAL_NO_DRAFT": "Hakuna rasimu ya kuchapisha au kufuta. Hifadhi rasimu kwanza."
+  "LEGAL_NO_DRAFT": "Hakuna rasimu ya kuchapisha au kufuta. Hifadhi rasimu kwanza.",
+  "APPROVAL_NOT_FOUND": "Ombi hilo la idhini halipo.",
+  "APPROVAL_UNKNOWN_ACTION": "Kitendo hicho hakiwezi kuwa na mtiririko wa idhini.",
+  "APPROVAL_NOT_PENDING": "Ombi hili halisubiri idhini tena.",
+  "APPROVAL_EXPIRED": "Muda wa ombi hili uliisha kabla ya kuidhinishwa.",
+  "APPROVAL_SELF": "Huwezi kuidhinisha au kukataa ombi lako mwenyewe.",
+  "APPROVAL_NOT_APPROVER": "Majukumu yako hayawezi kuidhinisha hatua hii.",
+  "APPROVAL_ALREADY_DECIDED": "Tayari umeamua kuhusu ombi hili.",
+  "APPROVAL_NOT_REQUESTER": "Aliyeomba pekee ndiye anaweza kuondoa ombi hili.",
+  "APPROVAL_NOTE_REQUIRED": "Ongeza maelezo (hadi herufi 1000).",
+  "APPROVAL_WORKFLOW_INVALID": "Mtiririko una makosa; yarekebishe kisha uhifadhi tena.",
+  "APPROVAL_ACTION_UNAVAILABLE": "Kitendo hiki hakipatikani tena."
 }

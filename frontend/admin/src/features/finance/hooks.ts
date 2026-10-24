@@ -5,6 +5,7 @@
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, unwrap } from "@/lib/api";
+import { unwrapGated } from "@/lib/approval";
 import { useScope } from "@/lib/scope";
 
 const PAYINS_LIMIT = 20; // the latest ones; older payments are in the journal
@@ -111,7 +112,7 @@ export function usePayoutDecision() {
     mutationFn: async (v: { id: string; approve: boolean; reason: string }) => {
       const opts = { params: { path: { id: v.id } }, body: { reason: v.reason } };
       return v.approve
-        ? unwrap(await api.POST("/admin/finance/payouts/{id}/approve", opts))
+        ? unwrapGated(await api.POST("/admin/finance/payouts/{id}/approve", opts))
         : unwrap(await api.POST("/admin/finance/payouts/{id}/reject", opts));
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "finance"] }),

@@ -2,6 +2,7 @@
 /** Trips hooks — the filtered list (URL-driven), one trip with its timeline, staff cancel. */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, unwrap } from "@/lib/api";
+import { unwrapGated } from "@/lib/approval";
 import { useScope } from "@/lib/scope";
 
 export interface TripFilter {
@@ -106,7 +107,7 @@ export function useRefund() {
       borne_by: "PLATFORM" | "DRIVER";
       reason: string;
     }) =>
-      unwrap(
+      unwrapGated(
         await api.POST("/admin/trips/{id}/refunds", {
           params: { path: { id }, header: { "Idempotency-Key": key } },
           body,

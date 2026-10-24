@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getAccess } from "@/lib/session";
+import { ApprovalNotice } from "./ApprovalNotice";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 
@@ -32,6 +33,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
+      <ApprovalNotice />
     </div>
   );
 }

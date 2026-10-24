@@ -6,6 +6,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/kalen-limited/hauler-rider/backend/internal/approvals"
+	"github.com/kalen-limited/hauler-rider/backend/internal/approvals/actions"
 	"github.com/kalen-limited/hauler-rider/backend/internal/compliance"
 	"github.com/kalen-limited/hauler-rider/backend/internal/identity"
 )
@@ -53,6 +55,10 @@ func (h complianceHandlers) settings(w http.ResponseWriter, req *http.Request) {
 	country := strings.ToUpper(chi.URLParam(req, "country"))
 	if !allowedScope(claimsFrom(req.Context()), country, "") {
 		writeError(w, req, ErrScopeForbidden, nil)
+		return
+	}
+	if sentForApproval(w, req, h.deps, approvals.Submission{Action: actions.RegulatorSettings, Reason: body.Reason, Country: country,
+		Target: "regulator:" + country, Payload: actions.RegulatorPayload{Country: country, Enabled: body.Enabled, FailClosed: body.FailClosed}}) {
 		return
 	}
 	st, err := h.deps.Compliance.SetSettings(req.Context(), claimsFrom(req.Context()).Subject, country, body.Enabled, body.FailClosed, body.Reason)

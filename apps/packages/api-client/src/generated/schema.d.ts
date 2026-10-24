@@ -3277,10 +3277,289 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/approvals/requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The approvals inbox: pending requests in the caller's countries, the caller's own, or finished ones */
+        get: operations["listApprovalRequests"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/approvals/requests/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The nav badge: pending requests the caller could approve or reject now */
+        get: operations["getApprovalSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/approvals/requests/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One approval request with its readable change, steps and decisions (only inside the caller's countries) */
+        get: operations["getApprovalRequest"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/approvals/requests/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve the current step (audited). On the last approval the change runs at once as the requester of record; the request comes back EXECUTED or FAILED */
+        post: operations["approveApprovalRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/approvals/requests/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject on the current step with a note (audited); nothing is applied */
+        post: operations["rejectApprovalRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/approvals/requests/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Withdraw your own pending request (audited) */
+        post: operations["cancelApprovalRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/approvals/workflows": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Every approvable action with its workflow (off until saved enabled), and the roles and permissions steps may name (approvals.manage) */
+        get: operations["listApprovalWorkflows"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/approvals/workflows/{action}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One action's workflow with every saved version (approvals.manage) */
+        get: operations["getApprovalWorkflow"];
+        /** Save the next version of an action's workflow (approvals.manage, audited). Pending requests keep the version they started under */
+        put: operations["saveApprovalWorkflow"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description The 202 body of a gated endpoint: the change was not applied; it waits for approval. No error envelope. */
+        ApprovalAccepted: {
+            approval_request: components["schemas"]["ApprovalRequest"];
+        };
+        ApprovalNoteInput: {
+            /** @description Required to reject */
+            note?: string;
+        };
+        ApprovalPerson: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
+        ApprovalChange: {
+            field: string;
+            before: string;
+            after: string;
+        };
+        ApprovalSummary: {
+            title: string;
+            changes: components["schemas"]["ApprovalChange"][];
+        };
+        ApprovalDecision: {
+            /** @description 0-based step index */
+            step: number;
+            approver: components["schemas"]["ApprovalPerson"];
+            /** @enum {string} */
+            decision: "APPROVE" | "REJECT";
+            /** @description The role (or perm:<key>) the approval counted as */
+            as_role: string;
+            note: string;
+            /** Format: date-time */
+            at: string;
+        };
+        ApprovalConditions: {
+            amount_min?: components["schemas"]["Money"];
+            amount_max?: components["schemas"]["Money"];
+            countries?: string[];
+        };
+        ApprovalStep: {
+            name: string;
+            /**
+             * @description ANY: `approvals` people holding any listed role (or the permission). ALL: one distinct person per listed role (and the permission)
+             * @enum {string}
+             */
+            mode: "ANY" | "ALL";
+            roles: string[];
+            permission?: string;
+            approvals: number;
+        };
+        ApprovalDefinition: {
+            conditions: components["schemas"]["ApprovalConditions"];
+            steps: components["schemas"]["ApprovalStep"][];
+            expire_hours: number;
+        };
+        ApprovalRequest: {
+            /** Format: uuid */
+            id: string;
+            action: string;
+            action_label: string;
+            /** @enum {string} */
+            status: "PENDING" | "APPROVED" | "EXECUTING" | "EXECUTED" | "FAILED" | "REJECTED" | "EXPIRED" | "CANCELLED";
+            requester: components["schemas"]["ApprovalPerson"];
+            reason: string;
+            country: string | null;
+            amount: components["schemas"]["Money"] | null;
+            target: string;
+            summary: components["schemas"]["ApprovalSummary"];
+            /** @description What the action's executor runs from */
+            payload: {
+                [key: string]: unknown;
+            };
+            workflow: components["schemas"]["ApprovalDefinition"];
+            workflow_version: number;
+            current_step: number;
+            decisions: components["schemas"]["ApprovalDecision"][];
+            /** @description The caller may approve or reject the current step now */
+            can_decide: boolean;
+            /** Format: date-time */
+            expires_at: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            decided_at: string | null;
+            /** Format: date-time */
+            executed_at: string | null;
+            /** @description The executed action's response */
+            result?: unknown;
+            /** @description Error code when the action FAILED */
+            error: string | null;
+        };
+        ApprovalAction: {
+            key: string;
+            label: string;
+            description: string;
+            group: string;
+            permission: string;
+            /**
+             * @description The numeric field conditions may test
+             * @enum {string}
+             */
+            condition?: "amount";
+            /** @description Tied to a country (a country condition applies) */
+            scoped: boolean;
+        };
+        ApprovalWorkflow: {
+            action: string;
+            enabled: boolean;
+            definition: components["schemas"]["ApprovalDefinition"];
+            /** @description 0 = never saved */
+            version: number;
+            updated_by: string | null;
+            /** Format: date-time */
+            updated_at: string | null;
+        };
+        ApprovalActionWorkflow: {
+            action: components["schemas"]["ApprovalAction"];
+            workflow: components["schemas"]["ApprovalWorkflow"];
+        };
+        ApprovalWorkflowVersion: {
+            version: number;
+            enabled: boolean;
+            definition: components["schemas"]["ApprovalDefinition"];
+            created_by: string | null;
+            by_name: string | null;
+            reason: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        ApprovalWorkflowDetail: components["schemas"]["ApprovalActionWorkflow"] & {
+            history: components["schemas"]["ApprovalWorkflowVersion"][];
+        };
+        ApprovalWorkflowList: {
+            data: components["schemas"]["ApprovalActionWorkflow"][];
+            roles: string[];
+            permissions: components["schemas"]["Permission"][];
+        };
+        ApprovalWorkflowInput: {
+            enabled: boolean;
+            definition: components["schemas"]["ApprovalDefinition"];
+            reason: string;
+        };
         Health: {
             /** @enum {string} */
             status: "ok" | "degraded";
@@ -4442,6 +4721,8 @@ export interface components {
             /** @description Sets a new password (at least 6 characters); empty keeps the current one */
             password?: string;
             roles: string[];
+            /** @description Why (required when the role change is held for approval) */
+            reason?: string;
         };
         Party: {
             /** Format: uuid */
@@ -5733,6 +6014,15 @@ export interface components {
         };
     };
     responses: {
+        /** @description Held for approval: the action's approval workflow is on and its conditions match, so the change was NOT applied. The body is the approval request (no error); the change runs when the workflow's steps are approved. */
+        SentForApproval: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ApprovalAccepted"];
+            };
+        };
         /** @description Error envelope */
         Error: {
             headers: {
@@ -7758,6 +8048,7 @@ export interface operations {
                     "application/json": components["schemas"]["TripRefunds"];
                 };
             };
+            202: components["responses"]["SentForApproval"];
             400: components["responses"]["Error"];
             403: components["responses"]["Error"];
             /** @description TRIP_NOT_REFUNDABLE or REFUND_TOO_LARGE (details.refundable) */
@@ -8110,6 +8401,7 @@ export interface operations {
                     "application/json": components["schemas"]["ThemeVersion"];
                 };
             };
+            202: components["responses"]["SentForApproval"];
             409: components["responses"]["Error"];
             422: components["responses"]["Error"];
         };
@@ -8793,6 +9085,7 @@ export interface operations {
                     "application/json": components["schemas"]["ProfileVersion"];
                 };
             };
+            202: components["responses"]["SentForApproval"];
             400: components["responses"]["Error"];
             409: components["responses"]["Error"];
         };
@@ -8825,6 +9118,7 @@ export interface operations {
                     "application/json": components["schemas"]["PricingProfile"];
                 };
             };
+            202: components["responses"]["SentForApproval"];
             409: components["responses"]["Error"];
         };
     };
@@ -8858,6 +9152,7 @@ export interface operations {
                     "application/json": components["schemas"]["ProfileScope"];
                 };
             };
+            202: components["responses"]["SentForApproval"];
             400: components["responses"]["Error"];
             404: components["responses"]["Error"];
             409: components["responses"]["Error"];
@@ -8911,6 +9206,7 @@ export interface operations {
                     "application/json": components["schemas"]["PricingProfile"];
                 };
             };
+            202: components["responses"]["SentForApproval"];
             409: components["responses"]["Error"];
         };
     };
@@ -9289,6 +9585,7 @@ export interface operations {
                     "application/json": components["schemas"]["PrivacyRequest"];
                 };
             };
+            202: components["responses"]["SentForApproval"];
             400: components["responses"]["Error"];
             403: components["responses"]["Error"];
             409: components["responses"]["Error"];
@@ -10855,6 +11152,7 @@ export interface operations {
                     "application/json": components["schemas"]["Payout"];
                 };
             };
+            202: components["responses"]["SentForApproval"];
             400: components["responses"]["Error"];
             403: components["responses"]["Error"];
             409: components["responses"]["Error"];
@@ -10945,6 +11243,7 @@ export interface operations {
                     };
                 };
             };
+            202: components["responses"]["SentForApproval"];
             400: components["responses"]["Error"];
             403: components["responses"]["Error"];
             409: components["responses"]["Error"];
@@ -11301,6 +11600,7 @@ export interface operations {
                     "application/json": components["schemas"]["StaffList"];
                 };
             };
+            202: components["responses"]["SentForApproval"];
             400: components["responses"]["Error"];
         };
     };
@@ -11672,6 +11972,298 @@ export interface operations {
                 };
                 content?: never;
             };
+            404: components["responses"]["Error"];
+        };
+    };
+    listApprovalRequests: {
+        parameters: {
+            query?: {
+                box?: "pending" | "mine" | "done";
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ApprovalRequest"][];
+                    };
+                };
+            };
+            403: components["responses"]["Error"];
+        };
+    };
+    getApprovalSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        actionable: number;
+                    };
+                };
+            };
+            403: components["responses"]["Error"];
+        };
+    };
+    getApprovalRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalRequest"];
+                };
+            };
+            403: components["responses"]["Error"];
+            /** @description APPROVAL_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    approveApprovalRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApprovalNoteInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalRequest"];
+                };
+            };
+            400: components["responses"]["Error"];
+            /** @description APPROVAL_SELF (the requester) or APPROVAL_NOT_APPROVER (no listed role, or the step's roles you hold are covered) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            404: components["responses"]["Error"];
+            /** @description APPROVAL_NOT_PENDING, APPROVAL_EXPIRED or APPROVAL_ALREADY_DECIDED */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    rejectApprovalRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApprovalNoteInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalRequest"];
+                };
+            };
+            /** @description APPROVAL_NOTE_REQUIRED */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+        };
+    };
+    cancelApprovalRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApprovalNoteInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalRequest"];
+                };
+            };
+            /** @description APPROVAL_NOT_REQUESTER */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+        };
+    };
+    listApprovalWorkflows: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalWorkflowList"];
+                };
+            };
+            403: components["responses"]["Error"];
+        };
+    };
+    getApprovalWorkflow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                action: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalWorkflowDetail"];
+                };
+            };
+            403: components["responses"]["Error"];
+            /** @description APPROVAL_UNKNOWN_ACTION */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    saveApprovalWorkflow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                action: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApprovalWorkflowInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalWorkflowDetail"];
+                };
+            };
+            /** @description REASON_REQUIRED or APPROVAL_WORKFLOW_INVALID (details.problems lists each one) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            403: components["responses"]["Error"];
             404: components["responses"]["Error"];
         };
     };

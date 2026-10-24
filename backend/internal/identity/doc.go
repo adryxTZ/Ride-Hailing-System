@@ -8,4 +8,5 @@
 //   - jobs.go     River job that sends the OTP text message
 //   - access.go   staff limits and sign-in sessions; ending sessions
 //   - person.go   a rider's or driver's account for staff: sessions, devices, notes
+//   - grants.go   a person's current roles and permissions; staff by phone; role names
 package identity

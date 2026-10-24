@@ -6,7 +6,10 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/shopspring/decimal"
 
+	"github.com/kalen-limited/hauler-rider/backend/internal/approvals"
+	"github.com/kalen-limited/hauler-rider/backend/internal/approvals/actions"
 	"github.com/kalen-limited/hauler-rider/backend/internal/identity"
+	"github.com/kalen-limited/hauler-rider/backend/internal/trips"
 )
 
 // mountTripMoney registers the staff fare actions on a trip: set the price
@@ -27,10 +30,16 @@ type tripMoneyHandlers struct{ deps Deps }
 
 // tripInScope refuses a trip outside the staff member's countries and regions.
 func tripInScope(w http.ResponseWriter, req *http.Request, d Deps) bool {
+	_, ok := scopedTrip(w, req, d)
+	return ok
+}
+
+// scopedTrip is tripInScope that also returns the trip.
+func scopedTrip(w http.ResponseWriter, req *http.Request, d Deps) (*trips.TripDetail, bool) {
 	t, err := d.Trips.AdminGet(req.Context(), chi.URLParam(req, "id"))
 	if err != nil {
 		writeDomainError(w, req, err)
-		return false
+		return nil, false
 	}
 	area := ""
 	if t.Area != nil {
@@ -38,9 +47,9 @@ func tripInScope(w http.ResponseWriter, req *http.Request, d Deps) bool {
 	}
 	if !allowedScope(claimsFrom(req.Context()), t.Country, area) {
 		writeError(w, req, ErrScopeForbidden, nil)
-		return false
+		return nil, false
 	}
-	return true
+	return t, true
 }
 
 type priceBody struct {
@@ -73,7 +82,12 @@ type refundBody struct {
 
 func (h tripMoneyHandlers) refund(w http.ResponseWriter, req *http.Request) {
 	var body refundBody
-	if !decode(w, req, &body) || !tripInScope(w, req, h.deps) {
+	if !decode(w, req, &body) {
+		return
+	}
+	t, ok := scopedTrip(w, req, h.deps)
+	if !ok || sentForApproval(w, req, h.deps, approvals.Submission{Action: actions.TripRefund, Reason: body.Reason, Country: t.Country,
+		Amount: &body.Amount, Target: "trip:" + t.ID, Payload: actions.RefundPayload{TripID: t.ID, Amount: body.Amount, BorneBy: body.BorneBy}}) {
 		return
 	}
 	r, err := h.deps.Refunds.Create(req.Context(), claimsFrom(req.Context()).Subject, chi.URLParam(req, "id"), body.Amount, body.BorneBy, body.Reason,

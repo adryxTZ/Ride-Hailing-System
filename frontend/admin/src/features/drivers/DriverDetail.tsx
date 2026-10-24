@@ -27,6 +27,7 @@ import { PersonStats } from "@/features/people/PersonStats";
 import { PlacesCard } from "@/features/people/PlacesCard";
 import { RatingsCard } from "@/features/people/RatingsCard";
 import { TripsPanel } from "@/features/people/TripsPanel";
+import { StaffRolesCard } from "@/features/staff/StaffRolesCard";
 import type { Schemas } from "@/lib/api";
 import { useClassName } from "@/lib/catalog";
 import { km, percent, seconds, when } from "@/lib/format";
@@ -196,6 +197,7 @@ export function DriverDetail({ id }: { id: string }) {
                       onEnd={canReview ? (sessionId) => setAsk({ kind: "end", sessionId }) : undefined}
                     />
                     <NotesCard id={id} notes={a.account.notes} index={14} />
+                    <StaffRolesCard phone={p.phone} name={p.full_name} index={14} />
                   </>
                 ) : null}
                 <Card index={15} title="Review history">

@@ -14,6 +14,7 @@ import { Cell, Row, Table } from "@/components/ui/Table";
 import { useMe } from "@/features/me";
 import type { Schemas } from "@/lib/api";
 import { useSetStaff, useStaff } from "./hooks";
+import { RolePicker } from "./RolePicker";
 
 type Draft = Schemas["StaffInput"];
 
@@ -25,12 +26,6 @@ export function StaffScreen() {
   const admin = me.can("staff.manage");
   const [draft, setDraft] = useState<Draft>();
   const [confirming, setConfirming] = useState(false);
-  const toggle = (role: string) =>
-    draft &&
-    setDraft({
-      ...draft,
-      roles: draft.roles.includes(role) ? draft.roles.filter((r) => r !== role) : [...draft.roles, role],
-    });
   return (
     <div>
       <PageHeader
@@ -80,19 +75,16 @@ export function StaffScreen() {
               />
             </Field>
           </div>
-          <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Roles">
-            {(data?.roles ?? []).map((r) => (
-              <button
-                key={r}
-                type="button"
-                aria-pressed={draft.roles.includes(r)}
-                onClick={() => toggle(r)}
-                className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${draft.roles.includes(r) ? "bg-ink text-canvas" : "bg-surface-2 text-muted hover:text-ink"}`}
-              >
-                {r}
-              </button>
-            ))}
-          </div>
+          <p className="mb-2 mt-4 text-sm font-medium">Roles</p>
+          <RolePicker
+            roles={data?.roles ?? []}
+            value={draft.roles}
+            onChange={(roles) => setDraft({ ...draft, roles })}
+          />
+          <p className="mt-2 text-xs text-muted">
+            Pick as many roles as they need; their permissions add up. A rider or driver with this phone keeps
+            their app account.
+          </p>
           <div className="mt-4 flex justify-end gap-2">
             <Button variant="ghost" onClick={() => setDraft(undefined)}>
               Cancel
@@ -130,15 +122,16 @@ export function StaffScreen() {
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() =>
+                        onClick={(e) => {
+                          e.stopPropagation(); // the row opens the person's page; this edits here
                           setDraft({
                             phone: s.phone,
                             full_name: s.full_name ?? "",
                             email: s.email ?? "",
                             password: "",
                             roles: [...s.staff_roles],
-                          })
-                        }
+                          });
+                        }}
                       >
                         Edit roles
                       </Button>
@@ -158,14 +151,17 @@ export function StaffScreen() {
         danger={!draft?.roles.length}
         busy={save.isPending}
         onClose={() => setConfirming(false)}
-        onConfirm={() =>
+        onConfirm={(reason) =>
           draft &&
-          save.mutate(draft, {
-            onSuccess: () => {
-              setConfirming(false);
-              setDraft(undefined);
+          save.mutate(
+            { ...draft, reason },
+            {
+              onSuccess: () => {
+                setConfirming(false);
+                setDraft(undefined);
+              },
             },
-          })
+          )
         }
       />
     </div>

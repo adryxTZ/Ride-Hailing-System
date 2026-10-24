@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/kalen-limited/hauler-rider/backend/internal/accounts"
+	"github.com/kalen-limited/hauler-rider/backend/internal/approvals"
 	"github.com/kalen-limited/hauler-rider/backend/internal/branding"
 	"github.com/kalen-limited/hauler-rider/backend/internal/compliance"
 	"github.com/kalen-limited/hauler-rider/backend/internal/dispatch"
@@ -91,6 +92,7 @@ type Deps struct {
 	Refunds       *refunds.Service            // staff refunds on completed trips (nil = off)
 	Accounts      *accounts.Service           // Finance › Accounts: balances per party, payments (nil = off)
 	Legal         *legal.Service              // legal texts: public pages and the Legal page (nil = off)
+	Approvals     *approvals.Service          // approval workflows and the inbox (nil = every change applies at once)
 	PublicAPIURL  string                      // public API base for links (receipt PDFs); "" = the request's host
 	PublicWebURL  string                      // base of public links (share pages); empty = the request's own host
 	CancelReasons json.RawMessage             // seed/cancel_reasons.json, served verbatim
@@ -153,6 +155,7 @@ func New(d Deps) http.Handler {
 		mountGeofences(v1, d)
 		mountAccounts(v1, d)
 		mountLegal(v1, d)
+		mountApprovals(v1, d)
 	})
 
 	mountSharePage(r, d) // public live-trip page at /share/{token}

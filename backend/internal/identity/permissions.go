@@ -23,6 +23,7 @@ const (
 	PermStaffManage      = "staff.manage"
 	PermBrandingManage   = "branding.manage"
 	PermLegalManage      = "legal.manage"
+	PermApprovalsManage  = "approvals.manage"
 )
 
 // PermissionPrefix marks permissions inside the token's roles claim ("perm:pricing.edit").
@@ -56,6 +57,7 @@ var Permissions = []Permission{
 	{PermStaffManage, "Staff", "Manage staff, roles, sessions and account status"},
 	{PermBrandingManage, "Settings", "Change the brand name, contacts, colours, logos and icons"},
 	{PermLegalManage, "Settings", "Edit and publish the privacy notices, terms and driver agreement, and the legal details"},
+	{PermApprovalsManage, "Settings", "Edit approval workflows: which actions need approval and by whom"},
 }
 
 // knownPermission reports whether a key is in the catalogue.

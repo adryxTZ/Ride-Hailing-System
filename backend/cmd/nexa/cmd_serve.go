@@ -26,6 +26,7 @@ import (
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 
 	"github.com/kalen-limited/hauler-rider/backend/internal/accounts"
+	"github.com/kalen-limited/hauler-rider/backend/internal/approvals/actions"
 	"github.com/kalen-limited/hauler-rider/backend/internal/branding"
 	"github.com/kalen-limited/hauler-rider/backend/internal/catalog"
 	"github.com/kalen-limited/hauler-rider/backend/internal/identity"
@@ -83,6 +84,8 @@ func runServe(args []string) error {
 	periodic = append(periodic, fraudPeriodic...)
 	pw, privacyPeriodic := registerPrivacyWorkers(workers)
 	periodic = append(periodic, privacyPeriodic...)
+	aw, approvalPeriodic := registerApprovalWorkers(workers)
+	periodic = append(periodic, approvalPeriodic...)
 	jobs, err := river.NewClient(riverpgxv5.New(bs.pool), &river.Config{
 		Queues:       map[string]river.QueueConfig{river.QueueDefault: {MaxWorkers: 16}},
 		Workers:      workers,
@@ -161,6 +164,9 @@ func runServe(args []string) error {
 	}
 	peopleSvc := newPeople(bs, peopleModules{ident: ident, trips: tripSvc, dispatch: dispatcher, msg: messagingSvc, safety: safetySvc,
 		profile: profileSvc, presence: presenceSvc, ledger: ledger, holds: holdSvc, payouts: payoutSvc, payins: paySvc, fleet: fleetSvc})
+	refundSvc := newRefunds(bs, brandID, ledger, tripSvc)
+	approvalSvc := startApprovals(bs, brandID, aw, ident, actions.Modules{Profiles: pricingProfiles, Refunds: refundSvc, Payouts: payoutSvc,
+		Privacy: privacySvc, Compliance: complianceSvc, Branding: brandingSvc})
 
 	handler := httpx.New(httpx.Deps{
 		Version:       Version,
@@ -198,7 +204,8 @@ func runServe(args []string) error {
 		Simulator:     simulator{pricing: priceSvc},
 		Fraud:         fraudSvc,
 		Privacy:       privacySvc,
-		Refunds:       newRefunds(bs, brandID, ledger, tripSvc),
+		Refunds:       refundSvc,
+		Approvals:     approvalSvc,
 		Accounts:      accounts.New(bs.pool, brandID, ledger),
 		Legal:         legalSvc,
 		Trips:         tripSvc,

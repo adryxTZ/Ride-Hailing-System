@@ -193,7 +193,7 @@ function Branding() {
             {
               onSuccess: (v) => {
                 setAsk(undefined);
-                setDraft(fromVersion(v, false));
+                if (v) setDraft(fromVersion(v, false)); // null: sent for approval, the draft stays
               },
             },
           )

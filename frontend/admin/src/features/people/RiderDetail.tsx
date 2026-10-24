@@ -16,6 +16,7 @@ import { ErrorNote, Skeleton } from "@/components/ui/States";
 import { Tabs } from "@/components/ui/Tabs";
 import { PersonFlagsCard } from "@/features/fraud/PersonFlagsCard";
 import { useMe } from "@/features/me";
+import { StaffRolesCard } from "@/features/staff/StaffRolesCard";
 import type { Schemas } from "@/lib/api";
 import { km, money, seconds, when } from "@/lib/format";
 import { useUrlState } from "@/lib/urlState";
@@ -141,6 +142,7 @@ export function RiderDetail({ id }: { id: string }) {
                   onEnd={canManage ? (sessionId) => setAsk({ kind: "end", sessionId }) : undefined}
                 />
                 <NotesCard id={id} notes={a.notes} index={12} />
+                <StaffRolesCard phone={a.phone} name={a.full_name} index={13} />
               </>
             )}
           </div>

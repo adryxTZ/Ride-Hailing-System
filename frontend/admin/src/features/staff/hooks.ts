@@ -2,6 +2,7 @@
 /** Staff hooks — accounts, one person's page, roles, and the audited actions on them. */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, type Schemas, unwrap } from "@/lib/api";
+import { unwrapGated } from "@/lib/approval";
 
 const KEY = ["admin", "staff"];
 const ROLES = ["admin", "roles"];
@@ -63,7 +64,7 @@ function check(r: { error?: unknown; response: Response }) {
 
 export function useSetStaff() {
   return useStaffWrite(async (body: Schemas["StaffInput"]) =>
-    unwrap(await api.PUT("/admin/staff", { body })),
+    unwrapGated(await api.PUT("/admin/staff", { body })),
   );
 }
 
