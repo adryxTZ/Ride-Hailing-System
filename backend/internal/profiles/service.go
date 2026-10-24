@@ -56,34 +56,29 @@ func (s *Service) Resolve(ctx context.Context, in Input) (*Resolution, error) {
 
 // locate fills the geofences at the pickup and drop-off and the zones the route crosses (in memory).
 func (s *Service) locate(ctx context.Context, in *Input) error {
+	in.HasDropoff = in.HasDropoff || in.Dropoff != nil
 	if s.fences == nil {
 		return nil
 	}
-	var err error
-	if in.Pickup != nil {
-		if in.PickupFences, err = s.hitsAt(ctx, *in.Pickup, in.Country); err != nil {
-			return err
-		}
+	ix, err := s.fences.Index(ctx)
+	if err != nil {
+		return err
 	}
-	if in.Dropoff != nil {
-		in.HasDropoff = true
-		if in.DropoffFences, err = s.hitsAt(ctx, *in.Dropoff, in.Country); err != nil {
-			return err
-		}
-	}
-	if len(in.Route) > 1 {
-		hits, err := s.fences.Crossed(ctx, in.Route)
-		if err != nil {
-			return err
-		}
-		in.CrossedZones = scopesOf(hits, in.Country)
-	}
+	locateIn(ix, in)
 	return nil
 }
 
-func (s *Service) hitsAt(ctx context.Context, p geofences.Point, country string) ([]ScopeRef, error) {
-	hits, err := s.fences.Contains(ctx, p)
-	return scopesOf(hits, country), err
+// locateIn fills an input's geofence lists from an index (today's or a past one).
+func locateIn(ix *geofences.Index, in *Input) {
+	if in.Pickup != nil {
+		in.PickupFences = scopesOf(ix.Contains(*in.Pickup), in.Country)
+	}
+	if in.Dropoff != nil {
+		in.DropoffFences = scopesOf(ix.Contains(*in.Dropoff), in.Country)
+	}
+	if len(in.Route) > 1 {
+		in.CrossedZones = scopesOf(ix.Crossed(in.Route), in.Country)
+	}
 }
 
 // scopesOf keeps the hits in the trip's country as candidate scopes.

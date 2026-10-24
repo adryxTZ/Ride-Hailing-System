@@ -39,6 +39,9 @@ importers:
       '@platform/maps':
         specifier: workspace:*
         version: link:../packages/maps
+      '@platform/privacy':
+        specifier: workspace:*
+        version: link:../packages/privacy
       '@platform/push':
         specifier: workspace:*
         version: link:../packages/push
@@ -237,6 +240,34 @@ importers:
         specifier: ^5.9.0
         version: 5.9.3
 
+  packages/privacy:
+    dependencies:
+      '@platform/api-client':
+        specifier: workspace:*
+        version: link:../api-client
+      '@platform/auth':
+        specifier: workspace:*
+        version: link:../auth
+      '@platform/ui':
+        specifier: workspace:*
+        version: link:../ui
+      react:
+        specifier: 19.2.3
+        version: 19.2.3
+      react-native:
+        specifier: '*'
+        version: 0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3)
+      react-native-reanimated:
+        specifier: '*'
+        version: 4.5.1(react-native-worklets@0.13.0(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
+    devDependencies:
+      '@types/react':
+        specifier: ~19.2.0
+        version: 19.2.18
+      typescript:
+        specifier: ^5.9.0
+        version: 5.9.3
+
   packages/push:
     dependencies:
       expo-constants:
@@ -311,6 +342,9 @@ importers:
       '@platform/maps':
         specifier: workspace:*
         version: link:../packages/maps
+      '@platform/privacy':
+        specifier: workspace:*
+        version: link:../packages/privacy
       '@platform/push':
         specifier: workspace:*
         version: link:../packages/push

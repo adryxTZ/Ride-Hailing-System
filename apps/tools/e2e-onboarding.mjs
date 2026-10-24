@@ -16,6 +16,10 @@ async function call(method, path, token, body, expect) {
 async function signIn(phone, app) {
   const otp = await call("POST", "/auth/otp/request", null, { phone, app });
   const t = await call("POST", "/auth/otp/verify", null, { phone, app, code: otp.dev_code ?? "0000" });
+  if (t.consent_required) { // a new account accepts the privacy notice before submitting
+    const doc = await call("GET", `/legal/consent?app=${app}`, null);
+    await call("POST", "/me/consents", t.access_token, { app: app.toUpperCase(), version: doc.version }, 204);
+  }
   return t.access_token;
 }
 const phone = `+2557${String(Date.now()).slice(-8)}`;

@@ -97,6 +97,24 @@ func (s *Service) Seed(ctx context.Context, dir string) (int, error) {
 //     tariff are returned as unavailable rather than failing the whole quote
 //  5. the quote is persisted with its pricing version and expiry
 func (s *Service) Quote(ctx context.Context, req Request) (*Quote, error) {
+	if s.profiles == nil {
+		return nil, ErrNoTariff
+	}
+	q, err := s.price(ctx, req, s.profiles.Resolve, s.now())
+	if err != nil {
+		return nil, err
+	}
+	if err := s.store.saveQuote(ctx, req, q, req.Attributes); err != nil {
+		return nil, fmt.Errorf("save quote: %w", err)
+	}
+	return q, nil
+}
+
+// resolver picks the pricing profile for a quote (live, or a preview).
+type resolver func(ctx context.Context, in profiles.Input) (*profiles.Resolution, error)
+
+// price is steps 1–4 of Quote at time `at`, with profiles resolved by `resolve`; nothing is saved.
+func (s *Service) price(ctx context.Context, req Request, resolve resolver, at time.Time) (*Quote, error) {
 	svc, err := s.catalog.Find(ctx, req.ServiceKey)
 	if err != nil {
 		return nil, err
@@ -135,10 +153,9 @@ func (s *Service) Quote(ctx context.Context, req Request) (*Quote, error) {
 	if err != nil {
 		return nil, err
 	}
-	if s.profiles == nil {
-		return nil, ErrNoTariff
-	}
-	res, err := s.profiles.Resolve(ctx, s.profileInput(ctx, req, area, route))
+	in := s.profileInput(ctx, req, area, route)
+	in.At = at
+	res, err := resolve(ctx, in)
 	if errors.Is(err, profiles.ErrNoDefault) {
 		return nil, ErrNoTariff
 	}
@@ -146,11 +163,11 @@ func (s *Service) Quote(ctx context.Context, req Request) (*Quote, error) {
 		return nil, err
 	}
 	policy := feePolicyOf(area.Ref.Country, area.Ref.ID, res.Terms, res.Profile.Version)
-	at := s.localTime(area.Ref.Country)
+	local := s.localTime(area.Ref.Country, at)
 	pinned := map[string]profiles.QuoteClassPinned{}
 	// finish adds the profile's charges, rounding and waiting/cancellation terms, and pins the class.
 	finish := func(o Option, t engine.Tariff) Option {
-		o, applied, added := withCharges(o, res, svc.Key, route.DistanceM, at)
+		o, applied, added := withCharges(o, res, svc.Key, route.DistanceM, local)
 		o = withWaiting(o, t, policy, added, policy.BookingFee.Add(carvedOf(applied)))
 		if o.Available {
 			pinned[o.VehicleClass] = profiles.QuoteClassPinned{Terms: res.Terms, Charges: applied}
@@ -170,7 +187,7 @@ func (s *Service) Quote(ctx context.Context, req Request) (*Quote, error) {
 		t, ok := tf.lookup(area.Ref.Country, area.Ref.ID, svc.Key, cls.Key)
 		// Precedence: fixed route beats the metered tariff (manual prices are set after booking).
 		if req.Dropoff != nil && len(req.Waypoints) == 0 { // a stop makes it a different journey
-			if fr, dir := matchFixedRoute(routesInScope(tf.Routes, area.Ref), svc.Key, req.Pickup, *req.Dropoff, cls.Key, s.now()); fr != nil {
+			if fr, dir := matchFixedRoute(routesInScope(tf.Routes, area.Ref), svc.Key, req.Pickup, *req.Dropoff, cls.Key, at); fr != nil {
 				q.Options = append(q.Options, finish(fixedRouteOption(fr, dir, t, cls.Key, surge, policy.BookingFee), t))
 				continue
 			}
@@ -193,9 +210,6 @@ func (s *Service) Quote(ctx context.Context, req Request) (*Quote, error) {
 		return nil, ErrNoTariff
 	}
 	q.pricing = quotePricing(res, pinned)
-	if err := s.store.saveQuote(ctx, req, q, req.Attributes); err != nil {
-		return nil, fmt.Errorf("save quote: %w", err)
-	}
 	return q, nil
 }
 

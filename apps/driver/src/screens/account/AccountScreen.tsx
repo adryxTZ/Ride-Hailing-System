@@ -1,4 +1,4 @@
-/** AccountScreen (driver) — who you are, your vehicle and documents, and the way into Settings. */
+/** AccountScreen (driver) — who you are, your vehicle and documents, and the ways into Privacy and Settings. */
 import { Avatar, Header, ListRow, Screen, Section, Text } from "@platform/ui";
 import { useRouter } from "expo-router";
 import { StyleSheet, View } from "react-native";
@@ -40,6 +40,12 @@ export function AccountScreen() {
         />
       </Section>
       <Section>
+        <ListRow
+          icon="account-lock-outline"
+          title="Privacy"
+          subtitle="Download or delete your data"
+          onPress={() => router.push("/account/privacy")}
+        />
         <ListRow icon="cog-outline" title="Settings" onPress={() => router.push("/account/settings")} />
       </Section>
     </Screen>

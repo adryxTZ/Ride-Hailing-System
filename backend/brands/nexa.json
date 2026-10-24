@@ -98,5 +98,47 @@
       },
       "status": "DRAFT"
     }
-  ]
+  ],
+  "legal": {
+    "consent": [
+      {
+        "app": "RIDER",
+        "version": 1,
+        "title": {
+          "en": "Your privacy",
+          "sw": "Faragha yako"
+        },
+        "summary": {
+          "en": "To use the app we process your phone number, name, trip locations and payment details as set out in our Privacy Notice and Terms.",
+          "sw": "Ili kutumia programu tunachakata namba yako ya simu, jina, maeneo ya safari na taarifa za malipo kama ilivyoelezwa kwenye Taarifa ya Faragha na Masharti yetu."
+        },
+        "url": {
+          "en": "https://nexa.example/privacy",
+          "sw": "https://nexa.example/sw/privacy"
+        },
+        "published_at": "2026-10-23T00:00:00Z"
+      },
+      {
+        "app": "DRIVER",
+        "version": 1,
+        "title": {
+          "en": "Your privacy",
+          "sw": "Faragha yako"
+        },
+        "summary": {
+          "en": "To use the app we process your phone number, name, trip locations and payment details as set out in our Privacy Notice and Terms.",
+          "sw": "Ili kutumia programu tunachakata namba yako ya simu, jina, maeneo ya safari na taarifa za malipo kama ilivyoelezwa kwenye Taarifa ya Faragha na Masharti yetu."
+        },
+        "url": {
+          "en": "https://nexa.example/privacy",
+          "sw": "https://nexa.example/sw/privacy"
+        },
+        "published_at": "2026-10-23T00:00:00Z"
+      }
+    ]
+  },
+  "privacy": {
+    "request_due_days": 30,
+    "retention": {}
+  }
 }

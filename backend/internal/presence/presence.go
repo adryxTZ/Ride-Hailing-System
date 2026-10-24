@@ -61,15 +61,24 @@ type Ping struct {
 	Heading  float64
 	SpeedMps float64
 	At       time.Time
+	Mocked   bool // the phone reports the location as mocked (Android)
 }
+
+// PingHook sees each accepted ping with the driver's previous position (nil
+// when going online): the fraud check. It must be fast and never fail the ping.
+type PingHook func(ctx context.Context, driverID string, prev *Ping, cur Ping)
 
 var ErrNotOnline = apperr.New("DRIVER_NOT_ONLINE", http.StatusConflict, "")
 
 type Service struct {
-	r     *redis.Client
-	brand string
-	now   func() time.Time
+	r      *redis.Client
+	brand  string
+	now    func() time.Time
+	onPing PingHook
 }
+
+// OnPing sets the hook every accepted ping goes through.
+func (s *Service) OnPing(h PingHook) { s.onPing = h }
 
 func New(r *redis.Client, brand string) *Service { return &Service{r: r, brand: brand, now: time.Now} }
 
@@ -79,19 +88,46 @@ func (s *Service) seenKey() string              { return "seen:" + s.brand } // 
 
 // Online creates the presence record (fresh immediately) and indexes the cell.
 func (s *Service) Online(ctx context.Context, driverID string, p Ping, caps Capabilities) (*Driver, error) {
-	return s.write(ctx, driverID, p, &caps, nil)
+	d, err := s.write(ctx, driverID, p, &caps, nil)
+	if err == nil && s.onPing != nil {
+		s.onPing(ctx, driverID, nil, s.stamped(p))
+	}
+	return d, err
 }
 
 // Update refreshes position and freshness; requires an existing record.
+// The previous position is read in the same call that checks the record exists.
 func (s *Service) Update(ctx context.Context, driverID string, p Ping) (*Driver, error) {
-	exists, err := s.r.Exists(ctx, s.key(driverID)).Result()
+	vals, err := s.r.HMGet(ctx, s.key(driverID), "lat", "lng", "at").Result()
 	if err != nil {
 		return nil, err
 	}
-	if exists == 0 {
+	prev, ok := previous(vals)
+	if !ok {
 		return nil, ErrNotOnline
 	}
-	return s.write(ctx, driverID, p, nil, nil)
+	d, err := s.write(ctx, driverID, p, nil, nil)
+	if err == nil && s.onPing != nil {
+		s.onPing(ctx, driverID, prev, s.stamped(p))
+	}
+	return d, err
+}
+
+// stamped fills a ping's time with now when the client sent none.
+func (s *Service) stamped(p Ping) Ping {
+	if p.At.IsZero() {
+		p.At = s.now()
+	}
+	return p
+}
+
+// previous turns HMGET lat, lng, at into a ping; ok is false when the record is missing.
+func previous(vals []any) (*Ping, bool) {
+	if len(vals) != 3 || vals[0] == nil || vals[1] == nil || vals[2] == nil {
+		return nil, false
+	}
+	num := func(v any) float64 { s, _ := v.(string); f, _ := strconv.ParseFloat(s, 64); return f }
+	return &Ping{Location: routing.Point{Lat: num(vals[0]), Lng: num(vals[1])}, At: time.Unix(int64(num(vals[2])), 0)}, true
 }
 
 // SetState moves a driver between IDLE / OFFERED / ON_TRIP (dispatch calls this).

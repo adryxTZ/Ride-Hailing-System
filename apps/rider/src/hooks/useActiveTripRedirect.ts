@@ -2,7 +2,8 @@
  * useActiveTripRedirect — whenever the rider has a ride in progress (found at
  * launch, after a reconnect, or booked on another device) the live trip screen
  * takes over, wherever the rider is in the app. Screens that belong to the trip
- * itself (the trip screen, the cancel sheet, safety, the chat) are left alone.
+ * itself (the trip screen, the cancel sheet, safety, the chat) are left alone, and
+ * so is the consent screen (the auth gate owns it until the notice is accepted).
  */
 import { useSession } from "@platform/auth";
 import { usePathname, useRouter } from "expo-router";
@@ -10,7 +11,7 @@ import { useEffect } from "react";
 import { useActiveTrip } from "@/hooks/useTrips";
 
 // The options screen hands over to the trip itself (after its slide-away animation).
-const TRIP_SCREENS = ["/book/requested", "/book/options", "/cancel-reason", "/account/safety"];
+const TRIP_SCREENS = ["/book/requested", "/book/options", "/cancel-reason", "/account/safety", "/consent"];
 
 export function useActiveTripRedirect() {
   const { isSignedIn } = useSession();

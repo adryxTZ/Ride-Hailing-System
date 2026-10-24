@@ -84,6 +84,9 @@ func (h onboardingHandlers) document(w http.ResponseWriter, req *http.Request) {
 }
 
 func (h onboardingHandlers) submit(w http.ResponseWriter, req *http.Request) {
+	if !consentGate(w, req, h.deps) {
+		return
+	}
 	ob, err := h.deps.Fleet.Submit(req.Context(), claimsFrom(req.Context()).Subject)
 	respondOnboarding(w, req, ob, err)
 }

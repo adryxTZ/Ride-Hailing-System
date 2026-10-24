@@ -11,9 +11,9 @@ import (
 
 // Record is a trip's immutable pricing record.
 type Record struct {
-	TripID      string          `json:"trip_id"`
+	TripID string `json:"trip_id"`
 	// AreaID is the trip's region (for staff limited to a region).
-	AreaID string `json:"-"`
+	AreaID      string          `json:"-"`
 	QuoteID     *string         `json:"quote_id"`
 	Country     *string         `json:"country"`
 	Profile     Ref             `json:"profile"`

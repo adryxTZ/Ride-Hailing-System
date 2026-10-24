@@ -84,3 +84,13 @@ export function fileSize(bytes?: number | null): string {
   if (bytes < KB * KB) return `${Math.max(1, Math.round(bytes / KB))} KB`;
   return `${(bytes / (KB * KB)).toLocaleString("en-US", { maximumFractionDigits: 1 })} MB`;
 }
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** "23 Oct 2026, 18:25" in local time, the same on the server and in the browser (no locale APIs). */
+export function dateTime(iso?: string | null): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}

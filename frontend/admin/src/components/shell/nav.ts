@@ -8,12 +8,14 @@ import {
   KeyRound,
   Landmark,
   LayoutGrid,
+  LockKeyhole,
   Map as MapIcon,
   MapPinned,
   Palette,
   Percent,
   Receipt,
   Route,
+  ScanSearch,
   Settings,
   ShieldAlert,
   ShieldCheck,
@@ -80,6 +82,8 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/compliance/documents", label: "Documents", icon: FileCheck },
       { href: "/compliance/regulator", label: "Regulator", icon: Landmark },
+      { href: "/compliance/fraud", label: "Fraud flags", icon: ScanSearch },
+      { href: "/compliance/privacy", label: "Privacy", icon: LockKeyhole },
     ],
   },
   {

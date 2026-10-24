@@ -2,10 +2,12 @@
 
 import {
   ArrowUpRight,
+  Calculator,
   CheckCheck,
   ChevronRight,
   Clock3,
   FileStack,
+  History,
   MapPin,
   Plus,
   ReceiptText,
@@ -71,11 +73,25 @@ function Profiles() {
         title="Fees and profiles"
         description={`Manage pricing rules, extra charges, and their payees in ${where.label.split(" · ")[0] || "the selected country"}.`}
         actions={
-          editable && tab === "profiles" ? (
-            <Button icon={<Plus size={15} aria-hidden="true" />} onClick={() => setAsking(true)}>
-              New profile
-            </Button>
-          ) : undefined
+          <>
+            <Link
+              href="/pricing/fees/history"
+              className="inline-flex h-9 items-center gap-1.5 rounded-full bg-surface-2 px-4 text-xs font-semibold hover:bg-line"
+            >
+              <History size={14} aria-hidden="true" /> History
+            </Link>
+            <Link
+              href="/pricing/fees/simulate"
+              className="inline-flex h-9 items-center gap-1.5 rounded-full bg-surface-2 px-4 text-xs font-semibold hover:bg-line"
+            >
+              <Calculator size={14} aria-hidden="true" /> Simulate
+            </Link>
+            {editable && tab === "profiles" ? (
+              <Button icon={<Plus size={15} aria-hidden="true" />} onClick={() => setAsking(true)}>
+                New profile
+              </Button>
+            ) : null}
+          </>
         }
       />
       <div className="mb-5 grid grid-cols-2 gap-3 xl:grid-cols-4">

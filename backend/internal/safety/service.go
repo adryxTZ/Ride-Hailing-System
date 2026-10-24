@@ -13,6 +13,7 @@ import (
 
 	"github.com/kalen-limited/hauler-rider/backend/internal/kernel/apperr"
 	"github.com/kalen-limited/hauler-rider/backend/internal/kernel/phone"
+	"github.com/kalen-limited/hauler-rider/backend/internal/kernel/scope"
 )
 
 // Service is the safety use cases for one brand.
@@ -125,8 +126,14 @@ func (s *Service) SOS(ctx context.Context, tripID, userID, baseURL string, in SO
 }
 
 // Alerts lists SOS alerts for staff (open ones only by default).
-func (s *Service) Alerts(ctx context.Context, openOnly bool) ([]Alert, error) {
-	return s.store.alerts(ctx, openOnly, alertsPage)
+// The scope limits them to a country or region ("" = everywhere).
+func (s *Service) Alerts(ctx context.Context, openOnly bool, sc scope.Scope) ([]Alert, error) {
+	return s.store.alerts(ctx, openOnly, sc, alertsPage)
+}
+
+// AlertScope is the country and region of an alert's trip.
+func (s *Service) AlertScope(ctx context.Context, alertID string) (country, areaID string, err error) {
+	return s.store.alertScope(ctx, alertID)
 }
 
 // Resolve closes an SOS alert with what staff did.

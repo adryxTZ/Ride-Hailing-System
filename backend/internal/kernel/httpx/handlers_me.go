@@ -1,6 +1,7 @@
 package httpx
 
 import (
+	"github.com/kalen-limited/hauler-rider/backend/internal/privacy"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -30,7 +31,17 @@ func (h meHandlers) get(w http.ResponseWriter, req *http.Request) {
 		writeDomainError(w, req, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, withClaims(p, req))
+	out := withClaims(p, req)
+	if h.deps.Privacy != nil {
+		c := claimsFrom(req.Context())
+		if app := privacy.AppOf(c.App); app != "" {
+			if out.Consent, err = h.deps.Privacy.Status(req.Context(), c.Subject, app); err != nil {
+				writeDomainError(w, req, err)
+				return
+			}
+		}
+	}
+	writeJSON(w, http.StatusOK, out)
 }
 
 func (h meHandlers) update(w http.ResponseWriter, req *http.Request) {
@@ -79,8 +90,9 @@ func (h meHandlers) deletePlace(w http.ResponseWriter, req *http.Request) {
 // meResponse is the profile plus the token's brand/app so clients need one call.
 type meResponse struct {
 	*profile.Profile
-	Brand string `json:"brand"`
-	App   string `json:"app"`
+	Brand   string                 `json:"brand"`
+	App     string                 `json:"app"`
+	Consent *privacy.ConsentStatus `json:"consent,omitempty"`
 }
 
 func withClaims(p *profile.Profile, req *http.Request) meResponse {

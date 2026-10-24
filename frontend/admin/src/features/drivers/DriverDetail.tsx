@@ -16,6 +16,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { ReasonDialog } from "@/components/ui/ReasonDialog";
 import { ErrorNote, Skeleton } from "@/components/ui/States";
 import { Tabs } from "@/components/ui/Tabs";
+import { PersonFlagsCard } from "@/features/fraud/PersonFlagsCard";
 import { useMe } from "@/features/me";
 import { AccountCard } from "@/features/people/AccountCard";
 import { ChartsView } from "@/features/people/ChartsView";
@@ -188,6 +189,7 @@ export function DriverDetail({ id }: { id: string }) {
                     <PlacesCard places={a.places} index={10} />
                     <RatingsCard ratings={a.ratings} index={11} who="the driver" />
                     <ComplaintsCard ratings={a.ratings} sos={a.sos} index={12} />
+                    <PersonFlagsCard personId={id} index={12} />
                     <AccountCard
                       account={a.account}
                       index={13}

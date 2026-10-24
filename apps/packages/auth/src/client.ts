@@ -1,6 +1,9 @@
 import { createApiClient } from "@platform/api-client";
 import type { Middleware } from "openapi-fetch";
 import { createAuthService } from "./authService";
+import { createConsentService } from "./consent";
+import { noteConsentRequired } from "./consentStore";
+import { installId } from "./install";
 import { type AppKind, useSessionStore } from "./session";
 
 interface Options {
@@ -19,8 +22,10 @@ const REQUEST_TIMEOUT_MS = 15_000;
  *  - proactive refresh when the access token is within a minute of expiry;
  *  - one refresh-and-retry when the server answers 401, implemented as a fetch
  *    wrapper because openapi-fetch's onResponse hook requires a real Response
- *    instance, which React Native's fetch polyfill does not satisfy.
- * Returns the client and the auth service bound to it.
+ *    instance, which React Native's fetch polyfill does not satisfy;
+ *  - a 403 CONSENT_REQUIRED from any call raises the consent flag (same wrapper,
+ *    same reason), so the app's gate shows the consent screen.
+ * Returns the client and the auth and consent services bound to it.
  */
 export function createSessionClient(opts: Options) {
   let refreshing: Promise<unknown> | null = null;
@@ -34,6 +39,12 @@ export function createSessionClient(opts: Options) {
   };
 
   const fetchWithRetry: typeof globalThis.fetch = async (input, init) => {
+    const response = await fetchRefreshing(input, init);
+    await noteConsentRequired(response);
+    return response;
+  };
+
+  const fetchRefreshing: typeof globalThis.fetch = async (input, init) => {
     const request = input instanceof Request ? input : new Request(input, init);
     const retry = request.clone();
     // Fail fast on an unreachable host instead of hanging the screen.
@@ -78,6 +89,15 @@ export function createSessionClient(opts: Options) {
   };
   client.use(proactiveRefresh);
 
+  /** Sign-ins carry this install's id (the server's self-booking check). */
+  const install: Middleware = {
+    async onRequest({ request }) {
+      if (isSignIn(request.url)) request.headers.set(INSTALL_HEADER, await installId());
+      return request;
+    },
+  };
+  client.use(install);
+
   /**
    * The access token for non-HTTP uses (the websocket), refreshed first when it
    * is about to expire. Goes through the same single-flight refresh as requests:
@@ -92,7 +112,14 @@ export function createSessionClient(opts: Options) {
     await refreshOnce().catch(() => undefined);
     return useSessionStore.getState().session?.accessToken;
   };
-  return { client, auth, freshAccessToken };
+  const consent = createConsentService(client, opts.app);
+  return { client, auth, consent, freshAccessToken };
+}
+
+const INSTALL_HEADER = "X-Install-Id";
+
+function isSignIn(url: string): boolean {
+  return url.includes("/auth/otp/verify") || url.includes("/auth/refresh");
 }
 
 function isAuthRoute(url: string): boolean {

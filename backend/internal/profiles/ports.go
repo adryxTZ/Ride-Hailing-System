@@ -2,6 +2,7 @@ package profiles
 
 import (
 	"context"
+	"time"
 
 	"github.com/kalen-limited/hauler-rider/backend/internal/geofences"
 )
@@ -17,11 +18,11 @@ type Areas interface {
 	AreaInfo(ctx context.Context, areaID string) (country, name string, ok bool, err error)
 }
 
-// Geofences finds the districts, zones and places at a point or along a route
-// (in memory), and checks a geofence for assignments.
+// Geofences gives the index of districts, zones and places (today's, cached, or
+// as they were at a past time) and checks a geofence for assignments.
 type Geofences interface {
-	Contains(ctx context.Context, p geofences.Point) ([]geofences.Hit, error)
-	Crossed(ctx context.Context, route []geofences.Point) ([]geofences.Hit, error)
+	Index(ctx context.Context) (*geofences.Index, error)
+	IndexAt(ctx context.Context, country string, at time.Time) (*geofences.Index, error)
 	Info(ctx context.Context, id string) (country, name, kind string, ok bool, err error)
 	Overlaps(ctx context.Context, country, onlyID string) ([]geofences.Overlap, error)
 }

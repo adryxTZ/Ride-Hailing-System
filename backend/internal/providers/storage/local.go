@@ -114,3 +114,23 @@ func (l *Local) Open(key string) (io.ReadCloser, string, error) {
 	}
 	return f, mime.TypeByExtension(filepath.Ext(key)), nil
 }
+
+// Put implements Writer (server-side files such as privacy exports).
+func (l *Local) Put(_ context.Context, key string, r io.Reader, maxBytes int64) error {
+	if !ValidKey(key) {
+		return ErrBadKey
+	}
+	return l.Write(key, r, maxBytes)
+}
+
+// Delete implements Writer; a file already gone is not an error.
+func (l *Local) Delete(_ context.Context, key string) error {
+	if !ValidKey(key) {
+		return ErrBadKey
+	}
+	err := os.Remove(filepath.Join(l.Dir, filepath.FromSlash(key)))
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	return err
+}

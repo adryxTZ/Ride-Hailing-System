@@ -622,7 +622,10 @@ paths:
       tags: [admin]
       operationId: listSosAlerts
       summary: SOS alerts (open ones unless all=1)
-      parameters: [{ name: all, in: query, schema: { type: string, enum: ["1"] } }]
+      parameters:
+        - { name: all, in: query, schema: { type: string, enum: ["1"] } }
+        - { name: country, in: query, schema: { type: string }, description: "Limit to a country (staff limited to countries always see only theirs)" }
+        - { name: area_id, in: query, schema: { type: string, format: uuid } }
       responses:
         "200":
           description: Alerts
@@ -701,6 +704,8 @@ paths:
       tags: [auth]
       security: []
       operationId: verifyOtp
+      parameters:
+        - $ref: "#/components/parameters/InstallId"
       summary: Exchange a code for a token pair (creates the account on first sign-in)
       requestBody:
         required: true
@@ -760,6 +765,8 @@ paths:
       tags: [auth]
       security: []
       operationId: refreshToken
+      parameters:
+        - $ref: "#/components/parameters/InstallId"
       summary: Rotate the refresh token and get a new access token
       requestBody:
         required: true
@@ -1135,6 +1142,26 @@ paths:
               schema: { $ref: "#/components/schemas/Trip" }
         "403": { $ref: "#/components/responses/Error" }
         "409": { $ref: "#/components/responses/Error" }
+  /driver/areas:
+    get:
+      tags: [driver]
+      operationId: getDriverAreas
+      summary: "Regions a driver can work in (their country's active areas) and where they are registered; sign-up sends area_id in the profile"
+      parameters:
+        - { name: country, in: query, schema: { type: string }, description: "Before registration: the country to list (default the brand's home country)" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [country, areas, selected, primary]
+                properties:
+                  country: { type: string }
+                  areas: { type: array, items: { $ref: "#/components/schemas/AreaRef" } }
+                  selected: { type: array, items: { $ref: "#/components/schemas/AreaRef" } }
+                  primary: { type: string }
   /driver/onboarding:
     get:
       tags: [onboarding]
@@ -1301,6 +1328,74 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/AdminTripDetail" }
         "403": { $ref: "#/components/responses/Error" }
+  /admin/trips/{id}/price:
+    post:
+      tags: [admin]
+      operationId: setTripPrice
+      summary: "Set a trip's fare by hand before it is paid (trips.price, audited); adds a MANUAL_PRICE line"
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount, reason]
+              properties:
+                amount: { $ref: "#/components/schemas/Money" }
+                reason: { type: string, maxLength: 1000 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Trip" }
+        "400": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "409": { description: "TRIP_PRICE_LOCKED, PAYMENT_IN_PROGRESS or PRICE_BELOW_FIXED_PARTS", content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+  /admin/trips/{id}/refunds:
+    get:
+      tags: [admin]
+      operationId: getTripRefunds
+      summary: "What the rider paid, what was refunded and what can still be refunded"
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TripRefunds" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+    post:
+      tags: [admin]
+      operationId: refundTrip
+      summary: "Refund part or all of a completed, paid trip (trips.refund, audited); owed to the rider until Finance pays it"
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: Idempotency-Key, in: header, schema: { type: string }, description: "A repeated key returns the trip's refunds without refunding again" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount, borne_by, reason]
+              properties:
+                amount: { $ref: "#/components/schemas/Money" }
+                borne_by: { type: string, enum: [PLATFORM, DRIVER] }
+                reason: { type: string, maxLength: 1000 }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TripRefunds" }
+        "400": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "409": { description: "TRIP_NOT_REFUNDABLE or REFUND_TOO_LARGE (details.refundable)", content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
   /admin/trips/{id}/cancel:
     post:
       tags: [admin]
@@ -2096,6 +2191,346 @@ paths:
               schema: { $ref: "#/components/schemas/PricingRecord" }
         "403": { $ref: "#/components/responses/Error" }
         "404": { $ref: "#/components/responses/Error" }
+  /legal/consent:
+    get:
+      tags: [public]
+      security: []
+      operationId: getConsentDocument
+      summary: "The current privacy notice for an app, in the caller's language (ETag)"
+      parameters:
+        - { name: app, in: query, required: true, schema: { type: string, enum: [rider, driver, RIDER, DRIVER] } }
+        - $ref: "#/components/parameters/AcceptLanguage"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConsentDocument" }
+        "304": { description: Not modified }
+        "404": { $ref: "#/components/responses/Error" }
+  /me/consents:
+    post:
+      tags: [me]
+      operationId: acceptConsent
+      summary: "Accept the app's current privacy notice (recorded with time, install and address)"
+      parameters:
+        - $ref: "#/components/parameters/InstallId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [app, version]
+              properties:
+                app: { type: string, enum: [RIDER, DRIVER] }
+                version: { type: integer }
+      responses:
+        "204": { description: Accepted }
+        "403": { $ref: "#/components/responses/Error" }
+        "409": { description: "CONSENT_VERSION_STALE with details.current_version", content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+  /me/privacy-requests:
+    get:
+      tags: [me]
+      operationId: listMyPrivacyRequests
+      summary: "My data export and deletion requests, newest first"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, required: [data], properties: { data: { type: array, items: { $ref: "#/components/schemas/PrivacyRequest" } } } }
+    post:
+      tags: [me]
+      operationId: createPrivacyRequest
+      summary: "Ask for a copy of my data, or for my account to be deleted (one open per kind, three a day)"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [kind], properties: { kind: { type: string, enum: [EXPORT, DELETE] } } }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PrivacyRequest" }
+        "409": { description: "PRIVACY_REQUEST_OPEN with details.request_id", content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "429": { $ref: "#/components/responses/Error" }
+  /me/privacy-requests/{id}/cancel:
+    post:
+      tags: [me]
+      operationId: cancelPrivacyRequest
+      summary: "Withdraw a request staff have not picked up yet"
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PrivacyRequest" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+  /me/privacy-requests/{id}/download:
+    get:
+      tags: [me]
+      operationId: downloadPrivacyExport
+      summary: "A 15-minute link to my ready export (the export itself is kept 24 h)"
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, required: [url, expires_at], properties: { url: { type: string }, expires_at: { type: string, format: date-time } } }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+        "410": { $ref: "#/components/responses/Error" }
+  /admin/privacy/requests:
+    get:
+      tags: [admin]
+      operationId: listPrivacyRequests
+      summary: "Privacy requests: open ones first by due date (privacy.handle)"
+      parameters:
+        - { name: status, in: query, schema: { type: string, enum: [REQUESTED, IN_PROGRESS, READY, DONE, REJECTED, CANCELLED] } }
+        - { name: kind, in: query, schema: { type: string, enum: [EXPORT, DELETE] } }
+        - { name: country, in: query, schema: { type: string }, description: "Staff limited to countries always see only theirs" }
+        - { name: limit, in: query, schema: { type: integer, maximum: 200 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, required: [data], properties: { data: { type: array, items: { $ref: "#/components/schemas/PrivacyRequest" } } } }
+        "403": { $ref: "#/components/responses/Error" }
+  /admin/privacy/requests/{id}:
+    get:
+      tags: [admin]
+      operationId: getPrivacyRequest
+      summary: "One request; an open deletion lists what would block it now"
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PrivacyRequest" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+  /admin/privacy/requests/{id}/approve:
+    post:
+      tags: [admin]
+      operationId: approvePrivacyRequest
+      summary: "Export: build the file (READY within minutes). Delete: anonymise now, or 409 DELETE_BLOCKED with details.blockers"
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReasonInput" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PrivacyRequest" }
+        "400": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+  /admin/privacy/requests/{id}/reject:
+    post:
+      tags: [admin]
+      operationId: rejectPrivacyRequest
+      summary: "Close a request with the reason the person sees"
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReasonInput" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PrivacyRequest" }
+        "400": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+  /admin/privacy/retention:
+    get:
+      tags: [admin]
+      operationId: getRetention
+      summary: "Retention rules, their periods and last daily run"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [name, days, rows_last_run]
+                      properties:
+                        name: { type: string }
+                        days: { type: integer }
+                        last_run_at: { type: [string, "null"], format: date-time }
+                        rows_last_run: { type: integer }
+                        error: { type: [string, "null"] }
+        "403": { $ref: "#/components/responses/Error" }
+  /admin/fraud/flags:
+    get:
+      tags: [admin]
+      operationId: listFraudFlags
+      summary: "The fraud review queue, newest first (cursor = opened_at of the last row)"
+      parameters:
+        - { name: status, in: query, schema: { type: string, enum: [OPEN, DISMISSED, CONFIRMED] } }
+        - { name: rule, in: query, schema: { type: string, enum: [GPS_SPOOF, SELF_BOOKING, DRIVER_CANCEL_RATE, DRIVER_NO_SHOW_RATE, RIDER_CANCEL_RATE] } }
+        - { name: subject_kind, in: query, schema: { type: string, enum: [DRIVER, RIDER] } }
+        - { name: subject_id, in: query, schema: { type: string, format: uuid } }
+        - { name: country, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, maximum: 200 } }
+        - { name: cursor, in: query, schema: { type: string, format: date-time } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, next_cursor]
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/FraudFlag" } }
+                  next_cursor: { type: string, description: "Empty at the end" }
+        "403": { $ref: "#/components/responses/Error" }
+  /admin/fraud/flags/{id}:
+    get:
+      tags: [admin]
+      operationId: getFraudFlag
+      summary: "One fraud flag with its evidence"
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FraudFlag" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+  /admin/fraud/flags/{id}/review:
+    post:
+      tags: [admin]
+      operationId: reviewFraudFlag
+      summary: "Dismiss or confirm a flag with a note (fraud.review, audited); a reviewed flag never changes"
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision, note]
+              properties:
+                decision: { type: string, enum: [DISMISS, CONFIRM] }
+                note: { type: string, maxLength: 1000 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FraudFlag" }
+        "400": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+  /admin/pricing/as-of:
+    get:
+      tags: [admin]
+      operationId: getPricingAsOf
+      summary: "Which profile priced a point (and a drop-off) at a past time, rebuilt from the assignment and profile history"
+      parameters:
+        - { name: country, in: query, schema: { type: string } }
+        - { name: lat, in: query, required: true, schema: { type: number } }
+        - { name: lng, in: query, required: true, schema: { type: number } }
+        - { name: at, in: query, required: true, schema: { type: string, format: date-time } }
+        - { name: dropoff_lat, in: query, schema: { type: number } }
+        - { name: dropoff_lng, in: query, schema: { type: number } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PricingAsOf" }
+        "400": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+  /admin/pricing/history:
+    get:
+      tags: [admin]
+      operationId: getPricingHistory
+      summary: "Which profile was assigned where, from when to when, who changed it and why (range up to 366 days)"
+      parameters:
+        - { name: country, in: query, schema: { type: string } }
+        - { name: scope_kind, in: query, schema: { type: string, enum: [COUNTRY, AREA, DISTRICT, ZONE, PLACE] } }
+        - { name: scope_id, in: query, schema: { type: string } }
+        - { name: from, in: query, required: true, schema: { type: string, format: date-time } }
+        - { name: to, in: query, required: true, schema: { type: string, format: date-time } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PricingTimeline" }
+        "400": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+  /admin/pricing/records.csv:
+    get:
+      tags: [admin]
+      operationId: exportPricingRecords
+      summary: "Finalised trip pricing records of a country as CSV (range up to 31 days; finance.view and country-level access)"
+      parameters:
+        - { name: country, in: query, schema: { type: string } }
+        - { name: from, in: query, required: true, schema: { type: string, format: date-time } }
+        - { name: to, in: query, required: true, schema: { type: string, format: date-time } }
+      responses:
+        "200":
+          description: OK
+          content:
+            text/csv:
+              schema: { type: string }
+        "400": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+  /admin/pricing/simulate:
+    post:
+      tags: [admin]
+      operationId: simulatePricing
+      summary: "Price a trip like a quote without saving anything, optionally at another time (±7 days) or with a draft profile taking part"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SimulateInput" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PricingSimulation" }
+        "400": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /admin/pricing/policy:
     post:
       tags: [admin]
@@ -3102,6 +3537,11 @@ components:
       name: X-App-Version
       in: header
       schema: { type: string, example: 1.0.0 }
+    InstallId:
+      name: X-Install-Id
+      in: header
+      description: "A random UUID v4 the app creates once per install (fraud checks); ignored when malformed"
+      schema: { type: string, format: uuid }
   responses:
     Error:
       description: Error envelope
@@ -3137,6 +3577,7 @@ components:
         access_token: { type: string }
         refresh_token: { type: string }
         expires_in: { type: integer, description: Access token lifetime in seconds }
+        consent_required: { type: boolean, description: "Show the privacy notice (GET /legal/consent) and accept it before booking, going online or submitting" }
     AppConfig:
       type: object
       required: [brand, theme, features, min_app_version]
@@ -3466,6 +3907,7 @@ components:
         licence_class: { type: string, description: "One of Onboarding.licence_classes; required when the country lists any (REQUIRED, UNKNOWN)" }
         licence_expiry: { type: string, format: date }
         national_id: { type: string }
+        area_id: { type: string, format: uuid, description: "The region the driver will work in (GET /driver/areas); staff can change it after approval" }
     Vehicle:
       type: object
       required: [id, service, vehicle_class, plate, status]
@@ -3744,6 +4186,8 @@ components:
         drivers_on_trip: { type: integer }
         driver_statuses: { type: object, additionalProperties: { type: integer } }
         open_sos: { type: integer }
+        fraud_open: { type: integer, description: "Fraud flags waiting for review in the country" }
+        privacy_overdue: { type: integer, description: "Privacy requests past their due date" }
         finance: { $ref: "#/components/schemas/FinanceSummary" }
         surge_areas: { type: integer }
     LiveDriver:
@@ -4337,6 +4781,7 @@ components:
         services: { type: array, items: { type: string }, description: "Ignored when driver registration is on: the approved vehicle decides" }
         vehicle_classes: { type: array, items: { type: string }, description: "Ignored when driver registration is on: the approved vehicle decides" }
         vehicle_id: { type: string }
+        mocked: { type: boolean, description: "Android reports the location as mocked (fraud check)" }
     LocationSample:
       type: object
       required: [location]
@@ -4345,6 +4790,7 @@ components:
         heading: { type: number }
         speed_mps: { type: number }
         client_at: { type: string, format: date-time, description: "Device clock, diagnostics only" }
+        mocked: { type: boolean, description: "Android reports the location as mocked (fraud check)" }
     DriverPresence:
       type: object
       required: [driver_id, location, h3, state, services, vehicle_classes, at]
@@ -4687,11 +5133,183 @@ components:
         created_at: { type: string, format: date-time }
         finalized_at: { type: [string, "null"], format: date-time }
         seal_valid: { type: [boolean, "null"], description: "Whether the stored hash still matches the record" }
+    TripRefunds:
+      type: object
+      required: [paid, refunded, refundable, currency, refunds]
+      properties:
+        paid: { $ref: "#/components/schemas/Money" }
+        refunded: { $ref: "#/components/schemas/Money" }
+        refundable: { $ref: "#/components/schemas/Money" }
+        currency: { type: string }
+        refunds:
+          type: array
+          items:
+            type: object
+            required: [id, trip_id, amount, currency, borne_by, reason, created_at, status]
+            properties:
+              id: { type: string, format: uuid }
+              trip_id: { type: string, format: uuid }
+              amount: { $ref: "#/components/schemas/Money" }
+              currency: { type: string }
+              borne_by: { type: string, enum: [PLATFORM, DRIVER] }
+              reason: { type: string }
+              created_by: { type: [string, "null"] }
+              created_at: { type: string, format: date-time }
+              status: { type: string, enum: [OWED, PAID] }
+              paid_at: { type: [string, "null"], format: date-time }
+    ConsentDocument:
+      type: object
+      required: [app, version, title, summary, url, published_at]
+      properties:
+        app: { type: string, enum: [RIDER, DRIVER] }
+        version: { type: integer }
+        title: { type: string }
+        summary: { type: string }
+        url: { type: string, description: "The full Privacy Notice and Terms" }
+        published_at: { type: string, format: date-time }
+    ConsentStatus:
+      type: object
+      required: [app, current_version, required]
+      properties:
+        app: { type: string, enum: [RIDER, DRIVER] }
+        current_version: { type: integer }
+        accepted_version: { type: [integer, "null"] }
+        required: { type: boolean }
+    PrivacyRequest:
+      type: object
+      required: [id, app, kind, status, created_at, due_at, blockers, overdue]
+      properties:
+        id: { type: string, format: uuid }
+        user_id: { type: string }
+        user_name: { type: [string, "null"] }
+        user_phone: { type: string }
+        app: { type: string }
+        kind: { type: string, enum: [EXPORT, DELETE] }
+        status: { type: string, enum: [REQUESTED, IN_PROGRESS, READY, DONE, REJECTED, CANCELLED] }
+        reason: { type: [string, "null"], description: "Staff's reason (shown to the person when rejected)" }
+        created_at: { type: string, format: date-time }
+        due_at: { type: string, format: date-time }
+        handled_by: { type: [string, "null"] }
+        handled_at: { type: [string, "null"], format: date-time }
+        download_expires_at: { type: [string, "null"], format: date-time }
+        blockers: { type: array, items: { type: string, enum: [ACTIVE_TRIP, DRIVER_DEBT, DRIVER_BALANCE, OPEN_PAYOUT, RIDER_DUES, OWED_TO_RIDER] } }
+        overdue: { type: boolean }
+        country: { type: [string, "null"], description: "The person's country (staff scope)" }
+    FraudFlag:
+      type: object
+      required: [id, rule, severity, subject, evidence, hits, status, opened_at, last_seen_at]
+      properties:
+        id: { type: string, format: uuid }
+        country: { type: [string, "null"] }
+        rule: { type: string, enum: [GPS_SPOOF, SELF_BOOKING, DRIVER_CANCEL_RATE, DRIVER_NO_SHOW_RATE, RIDER_CANCEL_RATE] }
+        severity: { type: string, enum: [LOW, MEDIUM, HIGH] }
+        subject:
+          type: object
+          required: [kind, id, phone]
+          properties:
+            kind: { type: string, enum: [DRIVER, RIDER] }
+            id: { type: string, format: uuid }
+            name: { type: [string, "null"] }
+            phone: { type: string }
+        trip_id: { type: [string, "null"] }
+        trip_code: { type: [string, "null"] }
+        evidence:
+          type: object
+          additionalProperties: true
+          description: "GPS_SPOOF: {mocked, pairs[{from, to, speed_mps, jump_m}]}; SELF_BOOKING: {signals[{code, severity, detail}]}; rates: {rule, count, of, rate, threshold, trip_ids}"
+        hits: { type: integer }
+        status: { type: string, enum: [OPEN, DISMISSED, CONFIRMED] }
+        opened_at: { type: string, format: date-time }
+        last_seen_at: { type: string, format: date-time }
+        reviewed_by: { type: [string, "null"] }
+        reviewed_at: { type: [string, "null"], format: date-time }
+        review_note: { type: [string, "null"] }
+    PricingAsOf:
+      type: object
+      required: [at, profile, scope, default_profile, terms, charges, resolution, approximate, notes]
+      properties:
+        at: { type: string, format: date-time }
+        profile: { $ref: "#/components/schemas/PricingRecordRef" }
+        scope: { type: object, properties: { kind: { type: string }, id: { type: string }, name: { type: string } } }
+        default_profile: { $ref: "#/components/schemas/PricingRecordRef" }
+        terms: { type: object, additionalProperties: true }
+        charges:
+          type: array
+          items:
+            allOf:
+              - { $ref: "#/components/schemas/ChargeRule" }
+              - type: object
+                properties:
+                  profile_id: { type: string }
+                  version: { type: integer }
+                  matched_at: { type: string, enum: [PICKUP, DROPOFF, ROUTE] }
+        resolution: { type: object, additionalProperties: true, description: "The trace: every candidate with its outcome" }
+        approximate: { type: boolean, description: "A region's shape changed after `at` (regions use today's shapes)" }
+        notes: { type: array, items: { type: string, enum: [REGION_SHAPE_CHANGED] } }
+    PricingTimelineEntry:
+      type: object
+      required: [assignment_id, profile_id, profile_name, profile_status, kind, id, name, priority, valid_from, reason]
+      properties:
+        assignment_id: { type: string, format: uuid }
+        profile_id: { type: string, format: uuid }
+        profile_name: { type: string }
+        profile_status: { type: string, enum: [DRAFT, ACTIVE, INACTIVE] }
+        kind: { type: string, enum: [COUNTRY, AREA, DISTRICT, ZONE, PLACE] }
+        id: { type: string }
+        name: { type: string }
+        priority: { type: integer }
+        valid_from: { type: string, format: date-time }
+        valid_to: { type: [string, "null"], format: date-time }
+        reason: { type: string }
+        close_reason: { type: [string, "null"] }
+        assigned_by: { type: [string, "null"] }
+        closed_by: { type: [string, "null"] }
+    PricingTimeline:
+      type: object
+      required: [assignments, events]
+      properties:
+        assignments: { type: array, items: { $ref: "#/components/schemas/PricingTimelineEntry" } }
+        events:
+          type: array
+          items:
+            allOf:
+              - { $ref: "#/components/schemas/ProfileEvent" }
+              - type: object
+                required: [profile_id, profile_name]
+                properties:
+                  profile_id: { type: string, format: uuid }
+                  profile_name: { type: string }
+    SimulateInput:
+      type: object
+      required: [service, pickup]
+      properties:
+        service: { type: string }
+        vehicle_class: { type: string }
+        pickup: { $ref: "#/components/schemas/Point" }
+        dropoff: { $ref: "#/components/schemas/Point" }
+        waypoints: { type: array, items: { $ref: "#/components/schemas/Point" } }
+        at: { type: string, format: date-time, description: "Within 7 days of now; a past time uses the profile history" }
+        preview_profile_id: { type: string, format: uuid, description: "A DRAFT or INACTIVE profile that takes part as if active, in this answer only" }
+    PricingSimulation:
+      type: object
+      required: [country, area, distance_m, duration_s, options, resolution, splits]
+      properties:
+        country: { type: string }
+        area: { type: object, additionalProperties: true }
+        distance_m: { type: integer }
+        duration_s: { type: integer }
+        polyline: { type: string }
+        options: { type: array, items: { $ref: "#/components/schemas/QuoteOption" } }
+        resolution: { type: object, additionalProperties: true, description: "Profile, scope, default, trace and per-class pinned terms and charges" }
+        splits:
+          type: object
+          description: "Per vehicle class: how the fare would be split"
+          additionalProperties: { type: object, additionalProperties: true }
     FareLine:
       type: object
       required: [code, amount]
       properties:
-        code: { type: string, enum: [BASE_FARE, SURGE, WAITING, LOADERS, PICKUP_APPROACH, MINIMUM_FARE_ADJUSTMENT, BOOKING_FEE, FIXED_ROUTE, ROUNDING, PREVIOUS_CANCELLATION, CHARGE] }
+        code: { type: string, enum: [BASE_FARE, SURGE, WAITING, LOADERS, PICKUP_APPROACH, MINIMUM_FARE_ADJUSTMENT, BOOKING_FEE, FIXED_ROUTE, ROUNDING, PREVIOUS_CANCELLATION, CHARGE, MANUAL_PRICE] }
         amount: { $ref: "#/components/schemas/Money" }
         label: { type: object, properties: { en: { type: string }, sw: { type: string } }, description: "The line's own wording (extra charges); show it before any code table" }
         meta: { type: object, additionalProperties: true, description: "CHARGE lines: {charge, category, recipient}" }
@@ -4749,6 +5367,7 @@ components:
         created_at: { type: string, format: date-time }
         brand: { type: string }
         app: { $ref: "#/components/schemas/AppKind" }
+        consent: { $ref: "#/components/schemas/ConsentStatus" }
     Place:
       type: object
       required: [id, kind, label, address, lat, lng, use_count, updated_at]

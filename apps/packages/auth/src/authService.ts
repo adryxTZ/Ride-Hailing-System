@@ -1,4 +1,5 @@
 import type { createApiClient } from "@platform/api-client";
+import { useConsentStore } from "./consentStore";
 import { type AppKind, type Session, sessionFromTokens, useSessionStore } from "./session";
 
 type Client = ReturnType<typeof createApiClient>;
@@ -14,7 +15,8 @@ export class ApiError extends Error {
   }
 }
 
-function toApiError(error: unknown, status: number): ApiError {
+/** Maps an openapi-fetch error body to ApiError (code + server-localised message). */
+export function toApiError(error: unknown, status: number): ApiError {
   const e = (error as { error?: { code?: string; message?: string } } | undefined)?.error;
   return new ApiError(e?.code ?? "UNKNOWN", e?.message ?? "Request failed", status);
 }
@@ -29,10 +31,11 @@ export function createAuthService(client: Client, app: AppKind) {
       return { devCode: data?.dev_code };
     },
 
-    /** Verifies the code and stores the resulting session. */
+    /** Verifies the code, stores the resulting session and notes whether consent is needed. */
     async verifyOtp(phone: string, code: string): Promise<Session> {
       const { data, error, response } = await client.POST("/auth/otp/verify", { body: { phone, code, app } });
       if (error || !data) throw toApiError(error, response.status);
+      noteConsent(data.consent_required);
       const session = sessionFromTokens(data.access_token, data.refresh_token);
       await useSessionStore.getState().set(session);
       return session;
@@ -49,6 +52,7 @@ export function createAuthService(client: Client, app: AppKind) {
         if (response.status === 401) await useSessionStore.getState().clear();
         throw toApiError(error, response.status);
       }
+      noteConsent(data.consent_required);
       const session = sessionFromTokens(data.access_token, data.refresh_token);
       await useSessionStore.getState().set(session);
       return session;
@@ -62,9 +66,15 @@ export function createAuthService(client: Client, app: AppKind) {
           .POST("/auth/logout", { body: { refresh_token: current.refreshToken } })
           .catch(() => undefined);
       }
+      useConsentStore.getState().setRequired(false);
       await useSessionStore.getState().clear();
     },
   };
+}
+
+/** Copies the token pair's consent flag into the store (absent from older servers: leave as is). */
+function noteConsent(required: boolean | undefined): void {
+  if (required !== undefined) useConsentStore.getState().setRequired(required);
 }
 
 export type AuthService = ReturnType<typeof createAuthService>;

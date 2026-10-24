@@ -78,6 +78,8 @@ type TokenPair struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
 	ExpiresIn    int    `json:"expires_in"`
+	// ConsentRequired: the app must show its privacy notice before booking or going online (set by the API layer).
+	ConsentRequired bool `json:"consent_required"`
 }
 
 // Error codes owned by this module (messages come from the i18n catalogue).

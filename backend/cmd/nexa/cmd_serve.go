@@ -78,6 +78,10 @@ func runServe(args []string) error {
 	mw, periodic := registerMoneyWorkers(workers)
 	cw, compliancePeriodic := registerComplianceWorkers(workers)
 	periodic = append(periodic, compliancePeriodic...)
+	fw, fraudPeriodic := registerFraudWorkers(workers)
+	periodic = append(periodic, fraudPeriodic...)
+	pw, privacyPeriodic := registerPrivacyWorkers(workers)
+	periodic = append(periodic, privacyPeriodic...)
 	jobs, err := river.NewClient(riverpgxv5.New(bs.pool), &river.Config{
 		Queues:       map[string]river.QueueConfig{river.QueueDefault: {MaxWorkers: 16}},
 		Workers:      workers,
@@ -143,6 +147,11 @@ func runServe(args []string) error {
 		return err
 	}
 	documentRules(complianceSvc, fleetSvc, holdSvc, messagingSvc, smsSender(bs))
+	fraudSvc := startFraud(bs, brandID, fw, jobs, tripSvc, presenceSvc)
+	privacySvc, err := startPrivacy(ctx, bs, brandID, pw, jobs, files, ledger, presenceSvc)
+	if err != nil {
+		return err
+	}
 	profileSvc := profile.New(bs.pool)
 	brandingSvc := branding.New(bs.pool, brandID, files, bs.presets, th)
 	peopleSvc := newPeople(bs, peopleModules{ident: ident, trips: tripSvc, dispatch: dispatcher, msg: messagingSvc, safety: safetySvc,
@@ -181,6 +190,10 @@ func runServe(args []string) error {
 		Branding:      brandingSvc,
 		Profiles:      pricingProfiles,
 		Geofences:     geofenceSvc,
+		Simulator:     simulator{pricing: priceSvc},
+		Fraud:         fraudSvc,
+		Privacy:       privacySvc,
+		Refunds:       newRefunds(bs, brandID, ledger, tripSvc),
 		Trips:         tripSvc,
 		Presence:      presenceSvc,
 		Hub:           hub,

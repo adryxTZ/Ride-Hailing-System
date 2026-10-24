@@ -75,3 +75,26 @@ func (l *Ledger) PostFareUnappliedTx(ctx context.Context, tx pgx.Tx, payinID, ri
 func (l *Ledger) WalletMoved(ctx context.Context, driverID string) {
 	l.notifyWallets(ctx, []Leg{{Kind: DriverWallet, OwnerID: driverID, Amount: decimal.NewFromInt(1)}})
 }
+
+// txRefund is the ledger kind for a refund staff granted on a completed trip.
+const txRefund = "trip.refund"
+
+// Refund bearers.
+const (
+	RefundByPlatform = "PLATFORM"
+	RefundByDriver   = "DRIVER"
+)
+
+// PostRefundTx records a refund owed to the rider (RIDER_REFUNDS, paid out by
+// Finance), taken from the platform's revenue or recovered from the driver's
+// wallet. Idempotent per refund id.
+func (l *Ledger) PostRefundTx(ctx context.Context, tx pgx.Tx, refundID, riderID, driverID, bearer string, amount decimal.Decimal, currency string) (bool, error) {
+	from := Leg{Kind: PlatformRevenue, Amount: amount}
+	memo := fmt.Sprintf("Refund %s to the rider, borne by the platform", amount)
+	if bearer == RefundByDriver {
+		from = Leg{Kind: DriverWallet, OwnerID: driverID, Amount: amount} // the driver owes it back
+		memo = fmt.Sprintf("Refund %s to the rider, recovered from your earnings", amount)
+	}
+	legs := []Leg{from, {Kind: RiderRefunds, OwnerID: riderID, Amount: amount.Neg()}}
+	return l.PostTx(ctx, tx, txRefund, refundID, memo, currency, legs)
+}

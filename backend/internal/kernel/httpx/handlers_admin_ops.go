@@ -57,6 +57,8 @@ type Overview struct {
 	DriversOnTrip  int                   `json:"drivers_on_trip"`
 	DriverStatuses map[string]int        `json:"driver_statuses"`
 	OpenSOS        int                   `json:"open_sos"`
+	FraudOpen      int                   `json:"fraud_open"`      // fraud flags waiting for review in the country
+	PrivacyOverdue int                   `json:"privacy_overdue"` // privacy requests past their due date
 	Finance        *money.FinanceSummary `json:"finance,omitempty"`
 	SurgeAreas     int                   `json:"surge_areas"`
 }
@@ -107,11 +109,23 @@ func (h adminOpsHandlers) overview(w http.ResponseWriter, req *http.Request) {
 		}
 		return err
 	})
+	g.Go(func() (err error) {
+		if h.deps.Privacy != nil {
+			o.PrivacyOverdue, err = h.deps.Privacy.OverdueCount(gctx, sc.Country)
+		}
+		return err
+	})
+	g.Go(func() (err error) {
+		if h.deps.Fraud != nil {
+			o.FraudOpen, err = h.deps.Fraud.OpenTotal(gctx, sc.Country)
+		}
+		return err
+	})
 	g.Go(func() error {
 		if h.deps.Safety == nil {
 			return nil
 		}
-		a, err := h.deps.Safety.Alerts(gctx, true)
+		a, err := h.deps.Safety.Alerts(gctx, true, sc)
 		o.OpenSOS = len(a)
 		return err
 	})
@@ -226,7 +240,7 @@ func (h adminOpsHandlers) trip(w http.ResponseWriter, req *http.Request) {
 
 func (h adminOpsHandlers) cancelTrip(w http.ResponseWriter, req *http.Request) {
 	var body reasonBody
-	if !decode(w, req, &body) {
+	if !decode(w, req, &body) || !tripInScope(w, req, h.deps) {
 		return
 	}
 	t, err := h.deps.Trips.AdminCancel(req.Context(), claimsFrom(req.Context()).Subject, chi.URLParam(req, "id"), body.Reason)

@@ -5,6 +5,8 @@ package identity
 const (
 	PermAll              = "*"
 	PermTripsCancel      = "trips.cancel"
+	PermTripsPrice       = "trips.price"
+	PermTripsRefund      = "trips.refund"
 	PermRidersBlock      = "riders.block"
 	PermDriversReview    = "drivers.review"
 	PermPricingEdit      = "pricing.edit"
@@ -14,6 +16,8 @@ const (
 	PermHoldsManage      = "holds.manage"
 	PermPayoutsApprove   = "payouts.approve"
 	PermComplianceManage = "compliance.manage"
+	PermFraudReview      = "fraud.review"
+	PermPrivacyHandle    = "privacy.handle"
 	PermSafetyResolve    = "safety.resolve"
 	PermStaffManage      = "staff.manage"
 	PermBrandingManage   = "branding.manage"
@@ -32,6 +36,8 @@ type Permission struct {
 // Permissions is the catalogue, in the order the roles editor shows it.
 var Permissions = []Permission{
 	{PermTripsCancel, "Operations", "End trips on behalf of riders or drivers"},
+	{PermTripsPrice, "Operations", "Set a trip's fare by hand before it is paid"},
+	{PermTripsRefund, "Money", "Refund part or all of a completed trip's fare"},
 	{PermRidersBlock, "Operations", "Block and unblock riders"},
 	{PermDriversReview, "Operations", "Review driver documents, approve, reject, suspend; set driver regions"},
 	{PermSafetyResolve, "Operations", "Close safety (SOS) alerts"},
@@ -42,6 +48,8 @@ var Permissions = []Permission{
 	{PermHoldsManage, "Money", "Place and release driver holds"},
 	{PermPayoutsApprove, "Money", "Approve or reject driver cash-outs"},
 	{PermComplianceManage, "Trust", "Regulator submissions and switches, driver documents"},
+	{PermFraudReview, "Trust", "Review fraud flags: dismiss or confirm"},
+	{PermPrivacyHandle, "Trust", "Handle privacy requests: data exports and account deletion"},
 	{PermStaffManage, "Staff", "Manage staff, roles, sessions and account status"},
 	{PermBrandingManage, "Settings", "Change the brand name, contacts, colours, logos and icons"},
 }

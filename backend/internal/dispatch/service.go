@@ -152,7 +152,7 @@ func (s *Service) candidates(ctx context.Context, r trips.OpenRequest, asked map
 		var out []candidate
 		for _, d := range drivers {
 			dist := routing.HaversineM(r.Pickup, d.Location)
-			if d.State != presence.Idle || asked[d.ID] || dist > maxPickupKm*1000 {
+			if !offerable(d, r, asked, dist) {
 				continue
 			}
 			out = append(out, candidate{TripID: r.TripID, DriverID: d.ID, DistanceM: dist, EtaS: etaSeconds(dist)})
@@ -165,6 +165,13 @@ func (s *Service) candidates(ctx context.Context, r trips.OpenRequest, asked map
 		}
 	}
 	return nil
+}
+
+// offerable reports whether a nearby driver may be offered a request: idle,
+// not already asked, close enough, and never the rider's own account (a person
+// signed in as both rider and driver would otherwise be offered their own ride).
+func offerable(d presence.Driver, r trips.OpenRequest, asked map[string]bool, distM float64) bool {
+	return d.State == presence.Idle && !asked[d.ID] && distM <= maxPickupKm*1000 && d.ID != r.RiderID
 }
 
 // offer records the offer and flips the trip to OFFERED atomically, then tells the driver.

@@ -27,7 +27,7 @@ func mountSafety(r chi.Router, d Deps) {
 	})
 	r.Group(func(g chi.Router) {
 		g.Use(requireAuth(d), requireStaff())
-		g.Get("/admin/sos", h.alerts)
+		g.With(scopeGuard).Get("/admin/sos", h.alerts)
 		g.With(requirePermission(identity.PermSafetyResolve)).Post("/admin/sos/{id}/resolve", h.resolve)
 	})
 }
@@ -103,7 +103,11 @@ func (h safetyHandlers) publicView(w http.ResponseWriter, req *http.Request) {
 }
 
 func (h safetyHandlers) alerts(w http.ResponseWriter, req *http.Request) {
-	list, err := h.deps.Safety.Alerts(req.Context(), req.URL.Query().Get("all") != "1")
+	sc := scopeFrom(req, h.deps)
+	if req.URL.Query().Get("country") == "" && len(staffAccess(claimsFrom(req.Context()))) == 0 {
+		sc.Country = "" // unlimited staff see every country unless they pick one
+	}
+	list, err := h.deps.Safety.Alerts(req.Context(), req.URL.Query().Get("all") != "1", sc)
 	if err != nil {
 		writeDomainError(w, req, err)
 		return
@@ -116,6 +120,15 @@ func (h safetyHandlers) resolve(w http.ResponseWriter, req *http.Request) {
 		Resolution string `json:"resolution"`
 	}
 	if !decode(w, req, &body) {
+		return
+	}
+	country, area, err := h.deps.Safety.AlertScope(req.Context(), chi.URLParam(req, "id"))
+	if err != nil {
+		writeDomainError(w, req, err)
+		return
+	}
+	if !allowedScope(claimsFrom(req.Context()), country, area) {
+		writeError(w, req, ErrScopeForbidden, nil)
 		return
 	}
 	if err := h.deps.Safety.Resolve(req.Context(), chi.URLParam(req, "id"), claimsFrom(req.Context()).Subject, body.Resolution); err != nil {

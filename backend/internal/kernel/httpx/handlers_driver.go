@@ -37,7 +37,8 @@ type driverStatusRequest struct {
 	Services       []string      `json:"services"`        // service keys the driver offers now
 	VehicleClasses []string      `json:"vehicle_classes"` // class keys of the vehicle in use
 	VehicleID      string        `json:"vehicle_id"`
-	Areas          []string      `json:"-"` // from the driver's registration, never from the app
+	Mocked         bool          `json:"mocked"` // Android reports a mocked location (fraud check)
+	Areas          []string      `json:"-"`      // from the driver's registration, never from the app
 }
 
 type driverStatusResponse struct {
@@ -101,6 +102,9 @@ func (h driverHandlers) setStatus(w http.ResponseWriter, req *http.Request) {
 		writeError(w, req, apperr.Validation, map[string]any{"fields": []string{"location"}})
 		return
 	}
+	if !consentGate(w, req, h.deps) {
+		return
+	}
 	// With the fleet module the approved vehicle decides what the driver serves;
 	// the app's own claim is only used where fleet is not wired (tests).
 	if h.deps.Fleet != nil {
@@ -143,7 +147,7 @@ func (h driverHandlers) setStatus(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 	p, err := h.deps.Presence.Online(req.Context(), driverID,
-		presence.Ping{Location: body.Location, Heading: body.Heading},
+		presence.Ping{Location: body.Location, Heading: body.Heading, Mocked: body.Mocked},
 		presence.Capabilities{Services: body.Services, Classes: body.VehicleClasses, VehicleID: body.VehicleID, Areas: body.Areas})
 	if err != nil {
 		writeDomainError(w, req, err)
@@ -157,6 +161,7 @@ type locationRequest struct {
 	Location routing.Point `json:"location"`
 	Heading  float64       `json:"heading"`
 	SpeedMps float64       `json:"speed_mps"`
+	Mocked   bool          `json:"mocked"`    // Android reports a mocked location (fraud check)
 	ClientAt *time.Time    `json:"client_at"` // kept for diagnostics only; freshness uses server time
 }
 
@@ -170,7 +175,7 @@ func (h driverHandlers) location(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	p, err := h.deps.Presence.Update(req.Context(), claimsFrom(req.Context()).Subject,
-		presence.Ping{Location: body.Location, Heading: body.Heading, SpeedMps: body.SpeedMps})
+		presence.Ping{Location: body.Location, Heading: body.Heading, SpeedMps: body.SpeedMps, Mocked: body.Mocked})
 	if err != nil {
 		writeDomainError(w, req, err)
 		return

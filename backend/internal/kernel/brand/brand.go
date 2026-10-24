@@ -35,6 +35,9 @@ type Brand struct {
 	// Countries the brand operates in. Country, Currency and Timezone above are the
 	// home country; a file without this list gets one entry built from them.
 	Countries []Country `json:"countries"`
+	// Legal is the privacy notice and terms per app and version; Privacy the request and retention rules.
+	Legal   Legal   `json:"legal"`
+	Privacy Privacy `json:"privacy"`
 }
 
 // Country is one country a brand operates in, with its own money and rules.
@@ -175,6 +178,9 @@ func Load(dir, code string) (*Brand, error) {
 		}
 	}
 	if err := b.validateCountries(); err != nil {
+		return nil, err
+	}
+	if err := b.validateLegal(); err != nil {
 		return nil, err
 	}
 	return &b, nil

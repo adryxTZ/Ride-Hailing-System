@@ -31,6 +31,7 @@ import { serviceLabel, useClassName } from "@/lib/catalog";
 import { cents, duration, km, money, STATUS_LABEL, statusTone, when } from "@/lib/format";
 import { useRegulator } from "@/lib/scope";
 import { useCancelTrip, useTrip } from "./hooks";
+import { TripFareActions } from "./TripFareActions";
 import { TripPaymentPanel } from "./TripPaymentPanel";
 import { TripPricingRecord } from "./TripPricingRecord";
 
@@ -43,6 +44,7 @@ const LINE_LABEL: Record<string, string> = {
   FIXED_ROUTE: "Fixed fare",
   PREVIOUS_CANCELLATION: "Earlier cancellation fee",
   MINIMUM_FARE_ADJUSTMENT: "Minimum fare top-up",
+  MANUAL_PRICE: "Price set by support",
 };
 const ENDED = [
   "COMPLETED",
@@ -403,6 +405,7 @@ export function TripDetail({ id }: { id: string }) {
                   ) : null}
                 </div>
                 <TripPaymentPanel trip={t} />
+                <TripFareActions trip={t} />
                 <TripPricingRecord trip={t} />
               </section>
 
@@ -593,6 +596,8 @@ const readable = (value: string) =>
     .replace(/^\w/, (c) => c.toUpperCase());
 
 function eventLabel(event: Schemas["TripEvent"]): string {
+  if (event.type === "trip.price_set")
+    return `Price set by support: ${String(event.payload?.from)} → ${String(event.payload?.to)}`;
   const status = event.payload?.status ?? event.payload?.to;
   if (typeof status === "string") return STATUS_LABEL[status] ?? readable(status);
   const labels: Record<string, string> = {

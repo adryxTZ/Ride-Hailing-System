@@ -1,8 +1,7 @@
 /** Root layout: providers + the auth gate. Screens live in src/screens. */
-import { useSession } from "@platform/auth";
-import { Stack, useRouter, useSegments } from "expo-router";
+import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect } from "react";
+import { useAuthGate } from "@/hooks/useAuthGate";
 import { useWorkRedirect } from "@/hooks/useWorkRedirect";
 import { AppProviders } from "@/providers/AppProviders";
 
@@ -15,17 +14,17 @@ export default function RootLayout() {
   );
 }
 
-/** Sends signed-out users to the auth group and signed-in users out of it. */
+/**
+ * Sends signed-out users to the auth group, people who must accept the Privacy
+ * Notice to the consent screen, and everyone else out of both (useAuthGate).
+ */
 function AuthGate() {
-  const { session, isHydrated } = useSession();
-  const segments = useSegments();
-  const router = useRouter();
+  useAuthGate();
   useWorkRedirect();
-  useEffect(() => {
-    if (!isHydrated) return;
-    const inAuthGroup = segments[0] === "(auth)";
-    if (!session && !inAuthGroup) router.replace("/(auth)/phone");
-    if (session && inAuthGroup) router.replace("/");
-  }, [session, isHydrated, segments, router]);
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      {/* No swipe back: the gate would only bring the person straight back here. */}
+      <Stack.Screen name="consent" options={{ gestureEnabled: false, animation: "fade" }} />
+    </Stack>
+  );
 }

@@ -256,7 +256,7 @@ func (s *Service) redispatch(ctx context.Context, tx pgx.Tx, tripID, driverID st
 // the driver starts the ride.
 func (s *Service) chargeWaiting(ctx context.Context, tx pgx.Tx, t *Trip) error {
 	arrived := t.Timestamps["arrived_pickup_at"]
-	if arrived == nil {
+	if arrived == nil || t.PricingSource == PricingManual { // a price staff set is the whole fare
 		return nil
 	}
 	fee, minutes := waitingFee(termsOf(t.QuoteOption), *arrived, s.now())

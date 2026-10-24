@@ -7,18 +7,21 @@ import (
 	"github.com/kalen-limited/hauler-rider/backend/internal/compliance"
 	"github.com/kalen-limited/hauler-rider/backend/internal/dispatch"
 	"github.com/kalen-limited/hauler-rider/backend/internal/fleet"
+	"github.com/kalen-limited/hauler-rider/backend/internal/fraud"
 	"github.com/kalen-limited/hauler-rider/backend/internal/messaging"
 	"github.com/kalen-limited/hauler-rider/backend/internal/money"
 	"github.com/kalen-limited/hauler-rider/backend/internal/payments"
 	"github.com/kalen-limited/hauler-rider/backend/internal/payouts"
 	"github.com/kalen-limited/hauler-rider/backend/internal/people"
 	"github.com/kalen-limited/hauler-rider/backend/internal/presence"
+	"github.com/kalen-limited/hauler-rider/backend/internal/privacy"
 	"github.com/kalen-limited/hauler-rider/backend/internal/profiles"
 	"github.com/kalen-limited/hauler-rider/backend/internal/providers/geocoding"
 	"github.com/kalen-limited/hauler-rider/backend/internal/providers/routing"
 	"github.com/kalen-limited/hauler-rider/backend/internal/providers/storage"
 	"github.com/kalen-limited/hauler-rider/backend/internal/realtime"
 	"github.com/kalen-limited/hauler-rider/backend/internal/receipts"
+	"github.com/kalen-limited/hauler-rider/backend/internal/refunds"
 	"github.com/kalen-limited/hauler-rider/backend/internal/safety"
 	"github.com/kalen-limited/hauler-rider/backend/internal/surge"
 	"net/http"
@@ -80,6 +83,10 @@ type Deps struct {
 	Branding      *branding.Service           // identity and published theme for app config, Branding page (nil = brand file only)
 	Profiles      *profiles.Service           // pricing profiles, payees, trip pricing records (nil = off)
 	Geofences     *geofences.Service          // districts, zones and places (nil = off)
+	Simulator     PricingSimulator            // admin pricing simulator (nil = off)
+	Fraud         *fraud.Service              // fraud flags and the review queue (nil = off)
+	Privacy       *privacy.Service            // consent, privacy requests, retention (nil = off)
+	Refunds       *refunds.Service            // staff refunds on completed trips (nil = off)
 	PublicAPIURL  string                      // public API base for links (receipt PDFs); "" = the request's host
 	PublicWebURL  string                      // base of public links (share pages); empty = the request's own host
 	CancelReasons json.RawMessage             // seed/cancel_reasons.json, served verbatim
@@ -135,6 +142,10 @@ func New(d Deps) http.Handler {
 		mountPeople(v1, d)
 		mountBranding(v1, d)
 		mountProfiles(v1, d)
+		mountPricingHistory(v1, d)
+		mountFraud(v1, d)
+		mountPrivacy(v1, d)
+		mountTripMoney(v1, d)
 		mountGeofences(v1, d)
 	})
 

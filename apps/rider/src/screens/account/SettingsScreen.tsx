@@ -1,11 +1,13 @@
 /** SettingsScreen — communication, language, privacy, security, legal, log out (design: Settings). */
 import { Header, ListRow, Screen, Section } from "@platform/ui";
+import { useRouter } from "expo-router";
 import { useBack } from "@/hooks/useBack";
 import { useProfile, useUpdateProfile } from "@/hooks/useProfile";
 import { auth } from "@/services/api";
 
 export function SettingsScreen() {
   const back = useBack();
+  const router = useRouter();
   const { data: me } = useProfile();
   const update = useUpdateProfile();
   const locale = me?.locale ?? "sw";
@@ -30,8 +32,8 @@ export function SettingsScreen() {
         <ListRow
           icon="account-lock-outline"
           title="Privacy"
-          subtitle="Manage your data and permissions"
-          onPress={() => undefined}
+          subtitle="Download or delete your data"
+          onPress={() => router.push("/account/privacy")}
         />
         <ListRow
           icon="lock-outline"

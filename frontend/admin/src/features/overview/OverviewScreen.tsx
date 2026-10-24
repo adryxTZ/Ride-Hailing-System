@@ -9,7 +9,9 @@ import {
   ChevronRight,
   Clock3,
   Flame,
+  LockKeyhole,
   Route,
+  ScanSearch,
   ShieldAlert,
   UserCheck,
 } from "lucide-react";
@@ -41,7 +43,7 @@ export function OverviewScreen() {
   const cur =
     o?.finance?.currency ?? countries?.find((country) => country.code === scope.country)?.currency ?? "TZS";
   const review = o?.driver_statuses?.PENDING_REVIEW ?? 0;
-  const attention = (o?.open_sos ?? 0) + review;
+  const attention = (o?.open_sos ?? 0) + review + (o?.fraud_open ?? 0) + (o?.privacy_overdue ?? 0);
   return (
     <div>
       <OperationsHeader
@@ -201,6 +203,22 @@ export function OverviewScreen() {
                   description="Unresolved requests for help"
                   value={o.open_sos}
                   tone={o.open_sos ? "bad" : "muted"}
+                />
+                <Attention
+                  href="/compliance/fraud"
+                  icon={<ScanSearch size={17} />}
+                  label="Fraud flags"
+                  description="Possible fake GPS, self-booking or cancel abuse"
+                  value={o.fraud_open ?? 0}
+                  tone={o.fraud_open ? "warn" : "muted"}
+                />
+                <Attention
+                  href="/compliance/privacy"
+                  icon={<LockKeyhole size={17} />}
+                  label="Privacy requests due"
+                  description="Data copies or deletions past their due date"
+                  value={o.privacy_overdue ?? 0}
+                  tone={o.privacy_overdue ? "bad" : "muted"}
                 />
                 <Attention
                   href="/drivers?status=PENDING_REVIEW"

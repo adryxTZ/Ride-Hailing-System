@@ -6,6 +6,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/kalen-limited/hauler-rider/backend/internal/kernel/apperr"
+	"github.com/kalen-limited/hauler-rider/backend/internal/kernel/scope"
 )
 
 type store struct {
@@ -68,10 +71,12 @@ func (s store) insertAlert(ctx context.Context, tripID, userID string, in SOSInp
 
 const alertColumns = `a.id, a.trip_id, t.code, a.user_id, u.full_name, u.phone, a.lat, a.lng, a.contacts_alerted, a.created_at, a.resolved_at, a.resolution`
 
-func (s store) alerts(ctx context.Context, openOnly bool, limit int) ([]Alert, error) {
+func (s store) alerts(ctx context.Context, openOnly bool, sc scope.Scope, limit int) ([]Alert, error) {
 	rows, err := s.pool.Query(ctx, `
 		SELECT `+alertColumns+` FROM sos_alerts a JOIN trips t ON t.id=a.trip_id JOIN users u ON u.id=a.user_id
-		WHERE a.brand_id=$1 AND (NOT $2 OR a.resolved_at IS NULL) ORDER BY a.created_at DESC LIMIT $3`, s.brandID, openOnly, limit)
+		WHERE a.brand_id=$1 AND (NOT $2 OR a.resolved_at IS NULL)
+		  AND ($4 = '' OR t.country_code = $4) AND ($5 = '' OR t.area_id = NULLIF($5,'')::uuid)
+		ORDER BY a.created_at DESC LIMIT $3`, s.brandID, openOnly, limit, sc.Country, sc.AreaID)
 	if err != nil {
 		return nil, err
 	}
@@ -83,4 +88,14 @@ func (s store) resolve(ctx context.Context, id, staffID, resolution string) (boo
 		UPDATE sos_alerts SET resolved_at=now(), resolved_by=$2, resolution=$3 WHERE id=$1 AND brand_id=$4 AND resolved_at IS NULL`,
 		id, staffID, resolution, s.brandID)
 	return tag.RowsAffected() > 0, err
+}
+
+// alertScope is where an alert's trip happened (staff limited to a country or region).
+func (s store) alertScope(ctx context.Context, id string) (country, areaID string, err error) {
+	err = s.pool.QueryRow(ctx, `SELECT coalesce(t.country_code,''), coalesce(t.area_id::text,'') FROM sos_alerts a JOIN trips t ON t.id=a.trip_id
+		WHERE a.id::text=$1 AND a.brand_id=$2`, id, s.brandID).Scan(&country, &areaID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", "", apperr.NotFound
+	}
+	return country, areaID, err
 }

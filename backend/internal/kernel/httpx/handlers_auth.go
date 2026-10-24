@@ -3,6 +3,7 @@ package httpx
 import (
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net"
 	"net/http"
 
@@ -75,6 +76,8 @@ func (h authHandlers) verifyOTP(w http.ResponseWriter, req *http.Request) {
 		writeDomainError(w, req, err)
 		return
 	}
+	h.recordInstall(req, pair, body.App)
+	consentRequired(req, h.deps, pair, body.App)
 	writeJSON(w, http.StatusOK, pair)
 }
 
@@ -119,7 +122,28 @@ func (h authHandlers) refresh(w http.ResponseWriter, req *http.Request) {
 		writeDomainError(w, req, err)
 		return
 	}
+	h.recordInstall(req, pair, body.App)
+	consentRequired(req, h.deps, pair, body.App)
 	writeJSON(w, http.StatusOK, pair)
+}
+
+// installHeader carries the app install's random id (the self-booking check).
+const installHeader = "X-Install-Id"
+
+// recordInstall notes which app install the person signed in from; it never
+// fails the sign-in (a malformed or missing id is ignored).
+func (h authHandlers) recordInstall(req *http.Request, pair *identity.TokenPair, app string) {
+	id := req.Header.Get(installHeader)
+	if h.deps.Fraud == nil || id == "" || pair == nil {
+		return
+	}
+	claims, err := h.deps.Keys.Verify(pair.AccessToken)
+	if err != nil {
+		return
+	}
+	if err := h.deps.Fraud.RecordInstall(req.Context(), claims.Subject, app, id); err != nil {
+		slog.Warn("record install", "err", err)
+	}
 }
 
 // logout revokes the whole session family of the given refresh token.

@@ -14,6 +14,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { ReasonDialog } from "@/components/ui/ReasonDialog";
 import { ErrorNote, Skeleton } from "@/components/ui/States";
 import { Tabs } from "@/components/ui/Tabs";
+import { PersonFlagsCard } from "@/features/fraud/PersonFlagsCard";
 import { useMe } from "@/features/me";
 import type { Schemas } from "@/lib/api";
 import { km, money, seconds, when } from "@/lib/format";
@@ -133,6 +134,7 @@ export function RiderDetail({ id }: { id: string }) {
                 <PlacesCard places={r.places} index={7} />
                 <RatingsCard ratings={r.ratings} index={8} who="the rider" />
                 <ComplaintsCard ratings={r.ratings} sos={r.sos} index={9} />
+                <PersonFlagsCard personId={id} index={10} />
                 <AccountCard
                   account={a}
                   index={11}

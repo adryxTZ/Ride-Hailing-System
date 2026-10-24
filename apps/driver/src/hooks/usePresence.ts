@@ -60,6 +60,7 @@ export function useLocationStream(online: boolean, onTrip = false) {
         heading: pos.coords.heading ?? 0,
         speed_mps: pos.coords.speed ?? 0,
         client_at: new Date(pos.timestamp).toISOString(),
+        mocked: pos.mocked === true, // Android's mock-location flag (server fraud check)
       })
         .then((status) => qc.setQueryData<DriverStatus>(STATUS_KEY, status))
         .catch(() => qc.invalidateQueries({ queryKey: STATUS_KEY })); // e.g. DRIVER_NOT_ONLINE → resync

@@ -15,6 +15,7 @@ import (
 	"github.com/kalen-limited/hauler-rider/backend/internal/areas"
 	"github.com/kalen-limited/hauler-rider/backend/internal/catalog"
 	"github.com/kalen-limited/hauler-rider/backend/internal/geofences"
+	"github.com/kalen-limited/hauler-rider/backend/internal/kernel/httpx"
 	"github.com/kalen-limited/hauler-rider/backend/internal/money"
 	"github.com/kalen-limited/hauler-rider/backend/internal/pricing"
 	"github.com/kalen-limited/hauler-rider/backend/internal/profiles"
@@ -148,4 +149,32 @@ func newGeofences(bs *bootstrap, brandID string, areaSvc *areas.Service, prof *p
 	svc.SetPorts(areaCountry{areaSvc}, prof)
 	prof.SetGeofences(svc)
 	return svc
+}
+
+// simulator adapts a saved-nothing quote to the admin simulator: each
+// available class's fare is split under the terms the quote would pin, with
+// the same money.Split that settles real trips.
+type simulator struct{ pricing *pricing.Service }
+
+func (s simulator) Simulate(ctx context.Context, req pricing.Request, opts pricing.PreviewOptions) (*httpx.Simulation, error) {
+	q, err := s.pricing.Preview(ctx, req, opts)
+	if err != nil {
+		return nil, err
+	}
+	qp := q.Pricing()
+	out := &httpx.Simulation{Country: q.Country, Area: q.Area, DistanceM: q.Route.DistanceM, DurationS: q.Route.DurationS, Polyline: q.Route.Polyline,
+		Options: q.Options, Resolution: qp, Splits: map[string]money.Breakdown{}}
+	for _, o := range q.Options {
+		pin, ok := qp.PerClass[o.VehicleClass]
+		if !o.Available || !ok {
+			continue
+		}
+		pinned := &profiles.Pinned{Profile: qp.Profile, Default: qp.Default, Terms: pin.Terms, Charges: pin.Charges}
+		b, err := money.Split(o.Fare, pin.Terms.BookingFee, o.Currency, policyOf(pinned), sharesOf(pin.Charges)...)
+		if err != nil {
+			return nil, err
+		}
+		out.Splits[o.VehicleClass] = b
+	}
+	return out, nil
 }

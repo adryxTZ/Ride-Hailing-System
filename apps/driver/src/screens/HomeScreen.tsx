@@ -238,7 +238,7 @@ function tripMapProps(trip: Trip | undefined, here: Point, polyline?: string) {
 
 /** Presence state + the go online/offline action, kept out of the view. */
 function usePresenceControl(onTrip: boolean) {
-  const { point, denied } = useCurrentLocation();
+  const { point, denied, mocked } = useCurrentLocation();
   const status = useDriverStatus();
   const mutation = useSetStatus();
   const [error, setError] = useState<string>();
@@ -251,7 +251,7 @@ function usePresenceControl(onTrip: boolean) {
       if (!next) return void (await mutation.mutateAsync({ online: false }));
       if (!point) throw new Error(denied ? "Allow location to go online" : "Waiting for your location…");
       // The server takes the service and class from the approved vehicle.
-      await mutation.mutateAsync({ online: true, location: point });
+      await mutation.mutateAsync({ online: true, location: point, mocked });
     } catch (e) {
       setError((e as Error).message);
     }

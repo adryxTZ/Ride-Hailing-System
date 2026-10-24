@@ -22,7 +22,7 @@ func cors(allowed []string) func(http.Handler) http.Handler {
 				h.Set("Access-Control-Allow-Origin", origin)
 				h.Set("Vary", "Origin")
 				h.Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-				h.Set("Access-Control-Allow-Headers", "Authorization, Content-Type, Accept-Language, X-App-Version, Idempotency-Key, If-None-Match, X-Change-Reason")
+				h.Set("Access-Control-Allow-Headers", "Authorization, Content-Type, Accept-Language, X-App-Version, Idempotency-Key, If-None-Match, X-Change-Reason, X-Install-Id")
 				h.Set("Access-Control-Expose-Headers", "ETag")
 				h.Set("Access-Control-Max-Age", "600")
 				if r.Method == http.MethodOptions {

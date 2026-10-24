@@ -16,6 +16,8 @@ import (
 // Profiles is the pricing-profile module as quotes and the Pricing page use it.
 type Profiles interface {
 	Resolve(ctx context.Context, in profiles.Input) (*profiles.Resolution, error)
+	Preview(ctx context.Context, in profiles.Input, previewProfileID string) (*profiles.Resolution, error)
+	AsOf(ctx context.Context, in profiles.Input) (*profiles.AsOfResult, error)
 	DefaultTerms(ctx context.Context, country string) (profiles.Effective, profiles.Ref, error)
 	ForScope(ctx context.Context, country, areaID string) (*profiles.ScopeVersions, error)
 	PublishForScope(ctx context.Context, staffID, country, areaID string, t profiles.Terms, reason string) error
@@ -41,14 +43,13 @@ func feePolicyOf(country, areaID string, e profiles.Effective, version int) FeeP
 
 // localTime is the quote time in the country's timezone (charges' day and time windows).
 // Locations are cached by the wiring (time.LoadLocation reads the zone database).
-func (s *Service) localTime(country string) time.Time {
-	now := s.now()
+func (s *Service) localTime(country string, at time.Time) time.Time {
 	if s.tz != nil {
 		if loc := s.tz(country); loc != nil {
-			return now.In(loc)
+			return at.In(loc)
 		}
 	}
-	return now
+	return at
 }
 
 // withCharges adds the profile's matching charges to an option as labelled

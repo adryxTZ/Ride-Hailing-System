@@ -107,3 +107,13 @@ async function uploadFile(fileUri: string, contentType: UploadType): Promise<str
   if (!put.ok) throw new OnboardingError("The upload failed. Please try again.");
   return ticket.data.file_key;
 }
+
+export type DriverAreas = components["schemas"]["AreaRef"][];
+export type AreaChoices = { country: string; areas: DriverAreas; selected: DriverAreas; primary: string };
+
+/** The regions the driver can work in, and where they are registered now. */
+export async function fetchDriverAreas(signal?: AbortSignal): Promise<AreaChoices> {
+  const { data, error } = await api.GET("/driver/areas", { signal });
+  if (error || !data) throw failure(error, "Could not load the regions");
+  return data;
+}

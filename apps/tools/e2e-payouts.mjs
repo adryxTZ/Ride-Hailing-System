@@ -84,7 +84,7 @@ if (Number((await wallet()).balance) !== before) fail("the wallet moved before t
 for (let i = 0; i < 60 && (p = await call("GET", `/driver/payouts/${p.id}`, dt)).status === "PENDING"; i++) await sleep(1000);
 const after = Number((await wallet()).balance);
 log(`gateway: ${p.status}; driver balance ${before} → ${after}`);
-if (p.status !== "PAID" || before - after !== min) fail("paid payout did not move the wallet by its amount");
+if (p.status !== "PAID" || Math.round((before - after) * 100) !== min * 100) fail("paid payout did not move the wallet by its amount");
 
 // 2) rejected with a reason
 p = await call("POST", "/driver/payouts", dt, { amount: String(min) }, 201, key());

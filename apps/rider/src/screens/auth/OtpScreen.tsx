@@ -1,5 +1,5 @@
 /** OtpScreen — step 2 of sign-in: enter the 6-digit code. Shows the dev code when the server echoes it. */
-import { ApiError } from "@platform/auth";
+import { ApiError, useConsentStore } from "@platform/auth";
 import { Button, Screen, Text, TextField } from "@platform/ui";
 import { useRouter } from "expo-router";
 import { useState } from "react";
@@ -19,7 +19,8 @@ export function OtpScreen({ phone, devCode }: { phone: string; devCode?: string 
     setError(undefined);
     try {
       await auth.verifyOtp(phone, code.trim());
-      router.replace("/");
+      // A first sign-in (or a changed notice) goes to the consent screen before Home.
+      router.replace(useConsentStore.getState().required ? "/consent" : "/");
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Could not verify the code.");
     } finally {

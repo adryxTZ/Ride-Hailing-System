@@ -35,7 +35,13 @@ export function Header({ title, leading, onLeading, trailingIcon, onTrailing, la
         )}
         {!large && title ? <Text style={styles.barTitle}>{title}</Text> : <View style={{ flex: 1 }} />}
         {trailingIcon ? (
-          <Pressable onPress={onTrailing} hitSlop={12} style={styles.action} accessibilityRole="button" accessibilityLabel={trailingIcon}>
+          <Pressable
+            onPress={onTrailing}
+            hitSlop={12}
+            style={styles.action}
+            accessibilityRole="button"
+            accessibilityLabel={trailingIcon}
+          >
             <Icon name={trailingIcon} size={24} color={palette.text} />
           </Pressable>
         ) : (

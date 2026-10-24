@@ -1,0 +1,25 @@
+{
+  "name": "@platform/privacy",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Data-protection requests (download my data, delete my account) for the rider and driver apps: service, display rules and presentational cards. Apps own the screens and data hooks.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@platform/api-client": "workspace:*",
+    "@platform/auth": "workspace:*",
+    "@platform/ui": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "*",
+    "react-native": "*",
+    "react-native-reanimated": "*"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.0",
+    "typescript": "^5.9.0"
+  }
+}

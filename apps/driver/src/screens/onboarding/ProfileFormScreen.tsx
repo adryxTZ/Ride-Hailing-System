@@ -1,11 +1,14 @@
 /**
  * ProfileFormScreen — the driver's name, licence number, class and expiry, and
- * national ID. The country's rules (licence format, classes) come from the server.
+ * national ID, and the region they will drive in. The country's rules (licence
+ * format, classes) and its regions come from the server.
  */
 import { Button, Header, Screen, Text, TextField } from "@platform/ui";
 import { useState } from "react";
+import { AreaPicker } from "@/components/onboarding/AreaPicker";
 import { LicenceClassPicker } from "@/components/onboarding/LicenceClassPicker";
 import { useBack } from "@/hooks/useBack";
+import { useDriverAreas } from "@/hooks/useDriverAreas";
 import { useOnboarding, useSaveProfile } from "@/hooks/useOnboarding";
 
 const DATE_HINT = "YYYY-MM-DD";
@@ -22,6 +25,11 @@ export function ProfileFormScreen() {
   const [nid, setNid] = useState(p?.national_id ?? "");
   const [cls, setCls] = useState(p?.licence_class ?? "");
   const classes = ob?.licence_classes ?? [];
+  const { data: choices } = useDriverAreas();
+  const regions = choices?.areas ?? [];
+  const [picked, setPicked] = useState("");
+  // One region needs no choice; a registered driver starts on their primary one.
+  const area = picked || choices?.primary || (regions.length === 1 ? regions[0].id : "");
   const licenceBad = licenceFails(licence.trim(), ob?.licence_pattern);
   const expiryBad = expiry !== "" && !datePattern.test(expiry);
   const ready =
@@ -29,6 +37,7 @@ export function ProfileFormScreen() {
     licence.trim() !== "" &&
     !licenceBad &&
     (classes.length === 0 || cls !== "") &&
+    (regions.length === 0 || area !== "") &&
     nid.trim() !== "" &&
     !expiryBad;
 
@@ -40,6 +49,7 @@ export function ProfileFormScreen() {
         licence_class: cls || undefined,
         licence_expiry: expiry || undefined,
         national_id: nid,
+        area_id: area || undefined,
       },
       { onSuccess: () => back() },
     );
@@ -63,6 +73,7 @@ export function ProfileFormScreen() {
         error={licenceBad ? "Check the number: type it exactly as printed on your licence." : undefined}
       />
       {classes.length ? <LicenceClassPicker classes={classes} value={cls} onChange={setCls} /> : null}
+      {regions.length > 1 ? <AreaPicker areas={regions} value={area} onChange={setPicked} /> : null}
       <TextField
         label="Licence expiry date (optional)"
         value={expiry}

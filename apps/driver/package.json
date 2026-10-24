@@ -16,6 +16,7 @@
     "@platform/auth": "workspace:*",
     "@platform/chat": "workspace:*",
     "@platform/maps": "workspace:*",
+    "@platform/privacy": "workspace:*",
     "@platform/push": "workspace:*",
     "@platform/realtime": "workspace:*",
     "@platform/ui": "workspace:*",

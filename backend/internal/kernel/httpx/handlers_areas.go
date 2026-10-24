@@ -28,6 +28,49 @@ func mountAreas(r chi.Router, d Deps) {
 		g.With(requirePermission(identity.PermAreasEdit)).Put("/admin/areas/{id}/cells", h.saveCells)
 		g.With(requirePermission(identity.PermDriversReview)).Put("/admin/drivers/{id}/areas", h.setDriverAreas)
 	})
+	r.With(requireAuth(d), requireApp("driver")).Get("/driver/areas", h.driverAreas)
+}
+
+// driverAreaChoices is what the driver app's region picker shows.
+type driverAreaChoices struct {
+	Country  string          `json:"country"`
+	Areas    []areas.AreaRef `json:"areas"`    // ACTIVE areas of the country, by name
+	Selected []areas.AreaRef `json:"selected"` // where the driver is registered now
+	Primary  string          `json:"primary"`
+}
+
+// driverAreas lists the regions a driver can work in (their country's ACTIVE
+// areas) and the ones they are registered in. Changing them after approval is
+// a staff action; at sign-up the profile form sends area_id.
+func (h areaHandlers) driverAreas(w http.ResponseWriter, req *http.Request) {
+	ctx := req.Context()
+	country := strings.ToUpper(req.URL.Query().Get("country"))
+	selected, primary, err := h.deps.Areas.DriverAreas(ctx, claimsFrom(ctx).Subject)
+	if err != nil {
+		writeDomainError(w, req, err)
+		return
+	}
+	if len(selected) > 0 {
+		country = selected[0].Country // registered drivers pick within their country
+	}
+	if country == "" {
+		country = h.deps.Brand.Country
+	}
+	list, err := h.deps.Areas.List(ctx, country)
+	if err != nil {
+		writeDomainError(w, req, err)
+		return
+	}
+	out := driverAreaChoices{Country: country, Areas: []areas.AreaRef{}, Selected: selected, Primary: primary}
+	if out.Selected == nil {
+		out.Selected = []areas.AreaRef{}
+	}
+	for _, a := range list {
+		if a.Status == areas.StatusActive {
+			out.Areas = append(out.Areas, areas.AreaRef{ID: a.ID, Code: a.Code, Name: a.Name, Country: a.Country})
+		}
+	}
+	writeJSON(w, http.StatusOK, out)
 }
 
 type areaHandlers struct{ deps Deps }

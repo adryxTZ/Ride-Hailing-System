@@ -498,3 +498,23 @@ Trip drawer and driver page show the regulator badge. Overview attention gets "S
   - **Admin:** Trust → Documents, with a Requirements tab (per-country selects, expiry checkboxes, "Add a document") and the Expiring / Expired / Missing / Renewals / No date tabs. Staff can correct an expiry date.
   - **Tests:** Go tests for expiry checks, reminder thresholds, the hold placed and lifted, and the checklist rules; app model tests; `e2e-onboarding` (expiry, hold, renewal) and `e2e-web-registration` pass.
   - Not yet run through the four factory reviewers.
+- 2026-10-23 S3 built as `00038_fraud.sql` and S4 as `00039_privacy.sql` (00033/00034 were taken).
+  - S3: `internal/fraud` (pure CheckPing, SelfBookingSignals, CancelFindings; Redis GPSGuard queues one job per
+    burst instead of the per-day SETNX, so repeats in later windows add hits; scan reads trip_events because a driver
+    cancel resets the trip row; contact phones normalised before comparing); presence `OnPing` hook reads the previous
+    position with the existing HMGET; dispatch `offerable` excludes the rider's own account; `X-Install-Id` recorded on
+    verify/refresh; admin `/compliance/fraud` (+ flag pages, person cards, overview row). Tests: rules, Redis guard,
+    DB dedupe/review/audit, scan SQL; `e2e-fraud.mjs` PASS.
+  - S4: `internal/privacy` (consent from the brand file `legal.consent[]`, Redis then Postgres; requests with
+    blockers saved after the rolled-back transaction; anonymisation; export of 13 sections via `storage.Writer`;
+    12 retention rules in batches with `nexa.retention` letting the fraud-flag guard allow stripping/deleting);
+    `tools/accept-consent.mjs` for the fixed test accounts. Tests: consent gate and new version, delete blocked then
+    anonymised, retention once a day and only old rows, every rule's SQL, every export section's SQL.
+- 2026-10-24 reviews (security + code) on S3/S4, pricing S3 and trip money; all findings fixed (`00041_review_fixes.sql`):
+  privacy requests carry the person's country (list, get, approve, reject and the overview count are scoped);
+  deletion also clears driver ID/licence numbers and sign-in IP/device; a driver's export leaves out riders' stops;
+  retention statements filter by brand; rejected-application files only when the files themselves are old; exports
+  purged by link expiry and one failed file no longer stops the batch; rate limit window set atomically; scan and
+  retention claims are re-taken an hour after a failed or unfinished run; install records written at most daily;
+  a GPS flag escalates to the highest severity and keeps the previous evidence; pricing CSV needs finance.view,
+  escapes formula cells and aborts the stream on a mid-way error; pricing history needs country-level access.

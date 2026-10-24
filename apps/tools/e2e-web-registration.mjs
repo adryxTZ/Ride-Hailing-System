@@ -1,5 +1,5 @@
 // Driver registration in the driver web app, as a new driver would do it on the phone:
-// sign in with a new number → "Become a driver" → personal details → vehicle (ride type, plate…)
+// sign in with a new number → "Your privacy" (I agree) → "Become a driver" → personal details → vehicle (ride type, plate…)
 // → 6 photos (file picker) → Send for review → "We're checking your documents" → staff approve
 // over the API → Home shows "Go online" with the registered vehicle.
 // Run: OUT=./tools/shots node tools/e2e-web-registration.mjs  (driver web on :8084, API on :8080)
@@ -25,6 +25,9 @@ await vis(/^Send code$/).click();
 const code = (await vis(/Development: code is \d+/).textContent()).match(/\d+$/)[0];
 await page.locator("input:visible").first().fill(code);
 await vis(/^Verify$/).click(); log(`signed in as new driver ${local}`);
+// A new account meets the privacy notice first.
+await vis(/^Your privacy$/).waitFor({ timeout: 30000 }); await page.waitForTimeout(600); await shot("reg-0-consent");
+await vis(/^I agree$/).click(); log("accepted the privacy notice");
 
 await vis(/^Become a driver$/).waitFor({ timeout: 30000 }); await page.waitForTimeout(800); await shot("reg-1-home");
 await vis(/^Continue registration$/).click();

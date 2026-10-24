@@ -1011,6 +1011,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/driver/areas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Regions a driver can work in (their country's active areas) and where they are registered; sign-up sends area_id in the profile */
+        get: operations["getDriverAreas"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/driver/onboarding": {
         parameters: {
             query?: never;
@@ -1175,6 +1192,41 @@ export interface paths {
         get: operations["getAdminTrip"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/trips/{id}/price": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Set a trip's fare by hand before it is paid (trips.price, audited); adds a MANUAL_PRICE line */
+        post: operations["setTripPrice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/trips/{id}/refunds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** What the rider paid, what was refunded and what can still be refunded */
+        get: operations["getTripRefunds"];
+        put?: never;
+        /** Refund part or all of a completed, paid trip (trips.refund, audited); owed to the rider until Finance pays it */
+        post: operations["refundTrip"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1818,6 +1870,296 @@ export interface paths {
         get: operations["getTripPricingRecord"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/legal/consent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The current privacy notice for an app, in the caller's language (ETag) */
+        get: operations["getConsentDocument"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/consents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Accept the app's current privacy notice (recorded with time, install and address) */
+        post: operations["acceptConsent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/privacy-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** My data export and deletion requests, newest first */
+        get: operations["listMyPrivacyRequests"];
+        put?: never;
+        /** Ask for a copy of my data, or for my account to be deleted (one open per kind, three a day) */
+        post: operations["createPrivacyRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/privacy-requests/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Withdraw a request staff have not picked up yet */
+        post: operations["cancelPrivacyRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/privacy-requests/{id}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A 15-minute link to my ready export (the export itself is kept 24 h) */
+        get: operations["downloadPrivacyExport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/privacy/requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Privacy requests: open ones first by due date (privacy.handle) */
+        get: operations["listPrivacyRequests"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/privacy/requests/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One request; an open deletion lists what would block it now */
+        get: operations["getPrivacyRequest"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/privacy/requests/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Export: build the file (READY within minutes). Delete: anonymise now, or 409 DELETE_BLOCKED with details.blockers */
+        post: operations["approvePrivacyRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/privacy/requests/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Close a request with the reason the person sees */
+        post: operations["rejectPrivacyRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/privacy/retention": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Retention rules, their periods and last daily run */
+        get: operations["getRetention"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/fraud/flags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The fraud review queue, newest first (cursor = opened_at of the last row) */
+        get: operations["listFraudFlags"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/fraud/flags/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One fraud flag with its evidence */
+        get: operations["getFraudFlag"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/fraud/flags/{id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Dismiss or confirm a flag with a note (fraud.review, audited); a reviewed flag never changes */
+        post: operations["reviewFraudFlag"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/pricing/as-of": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Which profile priced a point (and a drop-off) at a past time, rebuilt from the assignment and profile history */
+        get: operations["getPricingAsOf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/pricing/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Which profile was assigned where, from when to when, who changed it and why (range up to 366 days) */
+        get: operations["getPricingHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/pricing/records.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Finalised trip pricing records of a country as CSV (range up to 31 days; finance.view and country-level access) */
+        get: operations["exportPricingRecords"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/pricing/simulate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Price a trip like a quote without saving anything, optionally at another time (±7 days) or with a draft profile taking part */
+        post: operations["simulatePricing"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2724,6 +3066,8 @@ export interface components {
             refresh_token: string;
             /** @description Access token lifetime in seconds */
             expires_in: number;
+            /** @description Show the privacy notice (GET /legal/consent) and accept it before booking, going online or submitting */
+            consent_required?: boolean;
         };
         AppConfig: {
             brand: components["schemas"]["Brand"];
@@ -3062,6 +3406,11 @@ export interface components {
             /** Format: date */
             licence_expiry?: string;
             national_id: string;
+            /**
+             * Format: uuid
+             * @description The region the driver will work in (GET /driver/areas); staff can change it after approval
+             */
+            area_id?: string;
         };
         Vehicle: {
             /** Format: uuid */
@@ -3339,6 +3688,10 @@ export interface components {
                 [key: string]: number;
             };
             open_sos: number;
+            /** @description Fraud flags waiting for review in the country */
+            fraud_open?: number;
+            /** @description Privacy requests past their due date */
+            privacy_overdue?: number;
             finance?: components["schemas"]["FinanceSummary"];
             surge_areas: number;
         };
@@ -3903,6 +4256,8 @@ export interface components {
             /** @description Ignored when driver registration is on: the approved vehicle decides */
             vehicle_classes?: string[];
             vehicle_id?: string;
+            /** @description Android reports the location as mocked (fraud check) */
+            mocked?: boolean;
         };
         LocationSample: {
             location: components["schemas"]["Point"];
@@ -3913,6 +4268,8 @@ export interface components {
              * @description Device clock, diagnostics only
              */
             client_at?: string;
+            /** @description Android reports the location as mocked (fraud check) */
+            mocked?: boolean;
         };
         DriverPresence: {
             driver_id: string;
@@ -4325,9 +4682,206 @@ export interface components {
             /** @description Whether the stored hash still matches the record */
             seal_valid?: boolean | null;
         };
+        TripRefunds: {
+            paid: components["schemas"]["Money"];
+            refunded: components["schemas"]["Money"];
+            refundable: components["schemas"]["Money"];
+            currency: string;
+            refunds: {
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                trip_id: string;
+                amount: components["schemas"]["Money"];
+                currency: string;
+                /** @enum {string} */
+                borne_by: "PLATFORM" | "DRIVER";
+                reason: string;
+                created_by?: string | null;
+                /** Format: date-time */
+                created_at: string;
+                /** @enum {string} */
+                status: "OWED" | "PAID";
+                /** Format: date-time */
+                paid_at?: string | null;
+            }[];
+        };
+        ConsentDocument: {
+            /** @enum {string} */
+            app: "RIDER" | "DRIVER";
+            version: number;
+            title: string;
+            summary: string;
+            /** @description The full Privacy Notice and Terms */
+            url: string;
+            /** Format: date-time */
+            published_at: string;
+        };
+        ConsentStatus: {
+            /** @enum {string} */
+            app: "RIDER" | "DRIVER";
+            current_version: number;
+            accepted_version?: number | null;
+            required: boolean;
+        };
+        PrivacyRequest: {
+            /** Format: uuid */
+            id: string;
+            user_id?: string;
+            user_name?: string | null;
+            user_phone?: string;
+            app: string;
+            /** @enum {string} */
+            kind: "EXPORT" | "DELETE";
+            /** @enum {string} */
+            status: "REQUESTED" | "IN_PROGRESS" | "READY" | "DONE" | "REJECTED" | "CANCELLED";
+            /** @description Staff's reason (shown to the person when rejected) */
+            reason?: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            due_at: string;
+            handled_by?: string | null;
+            /** Format: date-time */
+            handled_at?: string | null;
+            /** Format: date-time */
+            download_expires_at?: string | null;
+            blockers: ("ACTIVE_TRIP" | "DRIVER_DEBT" | "DRIVER_BALANCE" | "OPEN_PAYOUT" | "RIDER_DUES" | "OWED_TO_RIDER")[];
+            overdue: boolean;
+            /** @description The person's country (staff scope) */
+            country?: string | null;
+        };
+        FraudFlag: {
+            /** Format: uuid */
+            id: string;
+            country?: string | null;
+            /** @enum {string} */
+            rule: "GPS_SPOOF" | "SELF_BOOKING" | "DRIVER_CANCEL_RATE" | "DRIVER_NO_SHOW_RATE" | "RIDER_CANCEL_RATE";
+            /** @enum {string} */
+            severity: "LOW" | "MEDIUM" | "HIGH";
+            subject: {
+                /** @enum {string} */
+                kind: "DRIVER" | "RIDER";
+                /** Format: uuid */
+                id: string;
+                name?: string | null;
+                phone: string;
+            };
+            trip_id?: string | null;
+            trip_code?: string | null;
+            /** @description GPS_SPOOF: {mocked, pairs[{from, to, speed_mps, jump_m}]}; SELF_BOOKING: {signals[{code, severity, detail}]}; rates: {rule, count, of, rate, threshold, trip_ids} */
+            evidence: {
+                [key: string]: unknown;
+            };
+            hits: number;
+            /** @enum {string} */
+            status: "OPEN" | "DISMISSED" | "CONFIRMED";
+            /** Format: date-time */
+            opened_at: string;
+            /** Format: date-time */
+            last_seen_at: string;
+            reviewed_by?: string | null;
+            /** Format: date-time */
+            reviewed_at?: string | null;
+            review_note?: string | null;
+        };
+        PricingAsOf: {
+            /** Format: date-time */
+            at: string;
+            profile: components["schemas"]["PricingRecordRef"];
+            scope: {
+                kind?: string;
+                id?: string;
+                name?: string;
+            };
+            default_profile: components["schemas"]["PricingRecordRef"];
+            terms: {
+                [key: string]: unknown;
+            };
+            charges: (components["schemas"]["ChargeRule"] & {
+                profile_id?: string;
+                version?: number;
+                /** @enum {string} */
+                matched_at?: "PICKUP" | "DROPOFF" | "ROUTE";
+            })[];
+            /** @description The trace: every candidate with its outcome */
+            resolution: {
+                [key: string]: unknown;
+            };
+            /** @description A region's shape changed after `at` (regions use today's shapes) */
+            approximate: boolean;
+            notes: "REGION_SHAPE_CHANGED"[];
+        };
+        PricingTimelineEntry: {
+            /** Format: uuid */
+            assignment_id: string;
+            /** Format: uuid */
+            profile_id: string;
+            profile_name: string;
+            /** @enum {string} */
+            profile_status: "DRAFT" | "ACTIVE" | "INACTIVE";
+            /** @enum {string} */
+            kind: "COUNTRY" | "AREA" | "DISTRICT" | "ZONE" | "PLACE";
+            id: string;
+            name: string;
+            priority: number;
+            /** Format: date-time */
+            valid_from: string;
+            /** Format: date-time */
+            valid_to?: string | null;
+            reason: string;
+            close_reason?: string | null;
+            assigned_by?: string | null;
+            closed_by?: string | null;
+        };
+        PricingTimeline: {
+            assignments: components["schemas"]["PricingTimelineEntry"][];
+            events: (components["schemas"]["ProfileEvent"] & {
+                /** Format: uuid */
+                profile_id: string;
+                profile_name: string;
+            })[];
+        };
+        SimulateInput: {
+            service: string;
+            vehicle_class?: string;
+            pickup: components["schemas"]["Point"];
+            dropoff?: components["schemas"]["Point"];
+            waypoints?: components["schemas"]["Point"][];
+            /**
+             * Format: date-time
+             * @description Within 7 days of now; a past time uses the profile history
+             */
+            at?: string;
+            /**
+             * Format: uuid
+             * @description A DRAFT or INACTIVE profile that takes part as if active, in this answer only
+             */
+            preview_profile_id?: string;
+        };
+        PricingSimulation: {
+            country: string;
+            area: {
+                [key: string]: unknown;
+            };
+            distance_m: number;
+            duration_s: number;
+            polyline?: string;
+            options: components["schemas"]["QuoteOption"][];
+            /** @description Profile, scope, default, trace and per-class pinned terms and charges */
+            resolution: {
+                [key: string]: unknown;
+            };
+            /** @description Per vehicle class: how the fare would be split */
+            splits: {
+                [key: string]: {
+                    [key: string]: unknown;
+                };
+            };
+        };
         FareLine: {
             /** @enum {string} */
-            code: "BASE_FARE" | "SURGE" | "WAITING" | "LOADERS" | "PICKUP_APPROACH" | "MINIMUM_FARE_ADJUSTMENT" | "BOOKING_FEE" | "FIXED_ROUTE" | "ROUNDING" | "PREVIOUS_CANCELLATION" | "CHARGE";
+            code: "BASE_FARE" | "SURGE" | "WAITING" | "LOADERS" | "PICKUP_APPROACH" | "MINIMUM_FARE_ADJUSTMENT" | "BOOKING_FEE" | "FIXED_ROUTE" | "ROUNDING" | "PREVIOUS_CANCELLATION" | "CHARGE" | "MANUAL_PRICE";
             amount: components["schemas"]["Money"];
             /** @description The line's own wording (extra charges); show it before any code table */
             label?: {
@@ -4391,6 +4945,7 @@ export interface components {
             created_at: string;
             brand: string;
             app: components["schemas"]["AppKind"];
+            consent?: components["schemas"]["ConsentStatus"];
         };
         Place: {
             /** Format: uuid */
@@ -4674,6 +5229,8 @@ export interface components {
     parameters: {
         AcceptLanguage: string;
         AppVersion: string;
+        /** @description A random UUID v4 the app creates once per install (fraud checks); ignored when malformed */
+        InstallId: string;
     };
     requestBodies: never;
     headers: never;
@@ -5563,6 +6120,9 @@ export interface operations {
         parameters: {
             query?: {
                 all?: "1";
+                /** @description Limit to a country (staff limited to countries always see only theirs) */
+                country?: string;
+                area_id?: string;
             };
             header?: never;
             path?: never;
@@ -5670,7 +6230,10 @@ export interface operations {
     verifyOtp: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description A random UUID v4 the app creates once per install (fraud checks); ignored when malformed */
+                "X-Install-Id"?: components["parameters"]["InstallId"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -5740,7 +6303,10 @@ export interface operations {
     refreshToken: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description A random UUID v4 the app creates once per install (fraud checks); ignored when malformed */
+                "X-Install-Id"?: components["parameters"]["InstallId"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -6286,6 +6852,34 @@ export interface operations {
             409: components["responses"]["Error"];
         };
     };
+    getDriverAreas: {
+        parameters: {
+            query?: {
+                /** @description Before registration: the country to list (default the brand's home country) */
+                country?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        country: string;
+                        areas: components["schemas"]["AreaRef"][];
+                        selected: components["schemas"]["AreaRef"][];
+                        primary: string;
+                    };
+                };
+            };
+        };
+    };
     getOnboarding: {
         parameters: {
             query?: never;
@@ -6547,6 +7141,115 @@ export interface operations {
                 };
             };
             403: components["responses"]["Error"];
+        };
+    };
+    setTripPrice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    amount: components["schemas"]["Money"];
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Trip"];
+                };
+            };
+            400: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            /** @description TRIP_PRICE_LOCKED, PAYMENT_IN_PROGRESS or PRICE_BELOW_FIXED_PARTS */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getTripRefunds: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TripRefunds"];
+                };
+            };
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+        };
+    };
+    refundTrip: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description A repeated key returns the trip's refunds without refunding again */
+                "Idempotency-Key"?: string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    amount: components["schemas"]["Money"];
+                    /** @enum {string} */
+                    borne_by: "PLATFORM" | "DRIVER";
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TripRefunds"];
+                };
+            };
+            400: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            /** @description TRIP_NOT_REFUNDABLE or REFUND_TOO_LARGE (details.refundable) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     cancelAdminTrip: {
@@ -7805,6 +8508,532 @@ export interface operations {
             };
             403: components["responses"]["Error"];
             404: components["responses"]["Error"];
+        };
+    };
+    getConsentDocument: {
+        parameters: {
+            query: {
+                app: "rider" | "driver" | "RIDER" | "DRIVER";
+            };
+            header?: {
+                "Accept-Language"?: components["parameters"]["AcceptLanguage"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConsentDocument"];
+                };
+            };
+            /** @description Not modified */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["Error"];
+        };
+    };
+    acceptConsent: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description A random UUID v4 the app creates once per install (fraud checks); ignored when malformed */
+                "X-Install-Id"?: components["parameters"]["InstallId"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    app: "RIDER" | "DRIVER";
+                    version: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Accepted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Error"];
+            /** @description CONSENT_VERSION_STALE with details.current_version */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    listMyPrivacyRequests: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["PrivacyRequest"][];
+                    };
+                };
+            };
+        };
+    };
+    createPrivacyRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    kind: "EXPORT" | "DELETE";
+                };
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrivacyRequest"];
+                };
+            };
+            /** @description PRIVACY_REQUEST_OPEN with details.request_id */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            429: components["responses"]["Error"];
+        };
+    };
+    cancelPrivacyRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrivacyRequest"];
+                };
+            };
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+        };
+    };
+    downloadPrivacyExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        url: string;
+                        /** Format: date-time */
+                        expires_at: string;
+                    };
+                };
+            };
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            410: components["responses"]["Error"];
+        };
+    };
+    listPrivacyRequests: {
+        parameters: {
+            query?: {
+                status?: "REQUESTED" | "IN_PROGRESS" | "READY" | "DONE" | "REJECTED" | "CANCELLED";
+                kind?: "EXPORT" | "DELETE";
+                /** @description Staff limited to countries always see only theirs */
+                country?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["PrivacyRequest"][];
+                    };
+                };
+            };
+            403: components["responses"]["Error"];
+        };
+    };
+    getPrivacyRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrivacyRequest"];
+                };
+            };
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+        };
+    };
+    approvePrivacyRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReasonInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrivacyRequest"];
+                };
+            };
+            400: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+        };
+    };
+    rejectPrivacyRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReasonInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrivacyRequest"];
+                };
+            };
+            400: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+        };
+    };
+    getRetention: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            name: string;
+                            days: number;
+                            /** Format: date-time */
+                            last_run_at?: string | null;
+                            rows_last_run: number;
+                            error?: string | null;
+                        }[];
+                    };
+                };
+            };
+            403: components["responses"]["Error"];
+        };
+    };
+    listFraudFlags: {
+        parameters: {
+            query?: {
+                status?: "OPEN" | "DISMISSED" | "CONFIRMED";
+                rule?: "GPS_SPOOF" | "SELF_BOOKING" | "DRIVER_CANCEL_RATE" | "DRIVER_NO_SHOW_RATE" | "RIDER_CANCEL_RATE";
+                subject_kind?: "DRIVER" | "RIDER";
+                subject_id?: string;
+                country?: string;
+                limit?: number;
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["FraudFlag"][];
+                        /** @description Empty at the end */
+                        next_cursor: string;
+                    };
+                };
+            };
+            403: components["responses"]["Error"];
+        };
+    };
+    getFraudFlag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FraudFlag"];
+                };
+            };
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+        };
+    };
+    reviewFraudFlag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    decision: "DISMISS" | "CONFIRM";
+                    note: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FraudFlag"];
+                };
+            };
+            400: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+        };
+    };
+    getPricingAsOf: {
+        parameters: {
+            query: {
+                country?: string;
+                lat: number;
+                lng: number;
+                at: string;
+                dropoff_lat?: number;
+                dropoff_lng?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PricingAsOf"];
+                };
+            };
+            400: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+        };
+    };
+    getPricingHistory: {
+        parameters: {
+            query: {
+                country?: string;
+                scope_kind?: "COUNTRY" | "AREA" | "DISTRICT" | "ZONE" | "PLACE";
+                scope_id?: string;
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PricingTimeline"];
+                };
+            };
+            400: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+        };
+    };
+    exportPricingRecords: {
+        parameters: {
+            query: {
+                country?: string;
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            400: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+        };
+    };
+    simulatePricing: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SimulateInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PricingSimulation"];
+                };
+            };
+            400: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
         };
     };
     publishFeePolicy: {

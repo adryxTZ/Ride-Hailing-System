@@ -241,6 +241,9 @@ func (s *Snapshot) rank(scopes []ScopeRef, at time.Time) ([]Candidate, *Candidat
 			continue
 		}
 		p := s.Profiles[a.ProfileID]
+		if sc.Kind == ScopeCountry && a.Name != "" {
+			sc.Name = a.Name // the country's name, read with its assignment
+		}
 		c := Candidate{Scope: sc, Priority: a.Priority, Profile: Ref{ID: p.ID, Name: p.Name}, since: a.ValidFrom}
 		c.Outcome = s.eligibility(p, at)
 		if v, ok := s.versionAt(p.ID, at); ok {

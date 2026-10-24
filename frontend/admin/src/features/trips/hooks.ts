@@ -69,3 +69,49 @@ export function useOpenReceipt(id: string) {
     },
   });
 }
+
+/** Sets a trip's fare by hand before it is paid (audited). */
+export function useSetPrice() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, amount, reason }: { id: string; amount: string; reason: string }) =>
+      unwrap(
+        await api.POST("/admin/trips/{id}/price", { params: { path: { id } }, body: { amount, reason } }),
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin"] }),
+  });
+}
+
+/** What a completed trip's rider paid, got back and can still get back. */
+export function useTripRefunds(id: string, completed: boolean) {
+  return useQuery({
+    queryKey: ["admin", "trip", id, "refunds"],
+    queryFn: async () => unwrap(await api.GET("/admin/trips/{id}/refunds", { params: { path: { id } } })),
+    enabled: completed,
+  });
+}
+
+/** Refunds part or all of a completed trip (audited). */
+export function useRefund() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      key,
+      ...body
+    }: {
+      id: string;
+      key: string; // Idempotency-Key: a retried request returns the same refund
+      amount: string;
+      borne_by: "PLATFORM" | "DRIVER";
+      reason: string;
+    }) =>
+      unwrap(
+        await api.POST("/admin/trips/{id}/refunds", {
+          params: { path: { id }, header: { "Idempotency-Key": key } },
+          body,
+        }),
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin"] }),
+  });
+}

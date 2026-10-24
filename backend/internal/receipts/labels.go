@@ -19,6 +19,7 @@ var lineLabels = map[string]map[string]string{
 	"FIXED_ROUTE":             {LangEN: "Fixed fare", LangSW: "Nauli maalum"},
 	"ROUNDING":                {LangEN: "Rounding", LangSW: "Kuzungusha"},
 	"PREVIOUS_CANCELLATION":   {LangEN: "Earlier cancellation fee", LangSW: "Ada ya kughairi awali"},
+	"MANUAL_PRICE":            {LangEN: "Price set by support", LangSW: "Bei iliyowekwa na huduma kwa wateja"},
 }
 
 // labelFor names a line; unknown codes are shown as words ("NIGHT_FEE" → "Night fee").

@@ -30,7 +30,7 @@ type tripHandlers struct{ deps Deps }
 // echoed; full replay protection lands with the idempotency store.
 func (h tripHandlers) create(w http.ResponseWriter, req *http.Request) {
 	var body trips.CreateInput
-	if !decode(w, req, &body) {
+	if !decode(w, req, &body) || !consentGate(w, req, h.deps) {
 		return
 	}
 	body.RiderID = claimsFrom(req.Context()).Subject
