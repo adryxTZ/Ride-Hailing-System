@@ -171,5 +171,10 @@
   "PAYMENT_IN_PROGRESS": "A payment is being taken for this trip. Try again in a minute.",
   "PRICE_BELOW_FIXED_PARTS": "The price can't be lower than the booking fee and the fixed charges.",
   "TRIP_NOT_REFUNDABLE": "Only a completed, paid trip can be refunded.",
-  "REFUND_TOO_LARGE": "That is more than what is left to refund on this trip."
+  "REFUND_TOO_LARGE": "That is more than what is left to refund on this trip.",
+  "ACCOUNT_NOT_FOUND": "That finance account was not found.",
+  "ACCOUNT_NOT_SETTLEABLE": "Payments can only be recorded on accounts the platform owes.",
+  "PAYMENT_MORE_THAN_OWED": "That is more than the platform owes on this account.",
+  "PAYMENT_AMOUNT_MISMATCH": "The amount must match the refunds being paid in full.",
+  "REFUND_NOT_OWED": "One of those refunds is already paid or was not found."
 }

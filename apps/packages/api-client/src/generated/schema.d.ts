@@ -2302,6 +2302,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/finance/accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Every party paid from fares with its balance, the period's movements and fare share (finance.view) */
+        get: operations["listFinanceAccounts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/finance/accounts/{key}/entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One page of an account's ledger entries in the period, newest first, with the running balance (finance.view) */
+        get: operations["listFinanceAccountEntries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/finance/accounts/{key}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The period's entries of an account as CSV, oldest first; text cells that start with = + - @ are escaped (finance.view) */
+        get: operations["exportFinanceAccountEntries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/finance/accounts/{key}/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record a payment against what the platform owes (VAT, levy, a charge payee, rider refunds); posted from the platform bank (finance.settle, audited) */
+        post: operations["recordFinancePayment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/finance/rider-refunds/owed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Unpaid rider refunds (oldest first) and riders by what they are owed, for recording a refund payment (finance.view) */
+        get: operations["listOwedRiderRefunds"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/countries": {
         parameters: {
             query?: never;
@@ -4725,6 +4810,130 @@ export interface components {
             payee_name?: string | null;
             /** @description false = the built-in default */
             custom: boolean;
+        };
+        /** @description One party's account. balance points the way position says: WE_OWE what we owe, OWED_TO_US what is owed to us, EARNED revenue, HELD at the gateway, BANK the platform bank (negative = net paid out) */
+        FinanceAccount: {
+            key: string;
+            kind: string;
+            /** Format: uuid */
+            payee_id?: string;
+            name?: string;
+            payee_kind?: string;
+            currency: string;
+            /** @enum {string} */
+            position: "EARNED" | "WE_OWE" | "OWED_TO_US" | "HELD" | "BANK";
+            balance: components["schemas"]["Money"];
+            owed_to_us?: components["schemas"]["Money"];
+            we_owe?: components["schemas"]["Money"];
+            /** @description Ledger accounts behind the line (drivers, riders) */
+            holders: number;
+            added: components["schemas"]["Money"];
+            reduced: components["schemas"]["Money"];
+            fare_base?: components["schemas"]["Money"];
+            on_fares?: components["schemas"]["Money"];
+            /** @description on_fares / fare_base, e.g. 0.0180 */
+            rate?: string;
+            entries: number;
+            /** Format: date-time */
+            last_at?: string;
+            settleable: boolean;
+        };
+        FinanceAccounts: {
+            currency: string;
+            /** Format: date-time */
+            from: string;
+            /**
+             * Format: date-time
+             * @description Exclusive
+             */
+            to: string;
+            fares: components["schemas"]["Money"];
+            trips: number;
+            accounts: components["schemas"]["FinanceAccount"][];
+        };
+        FinanceAccountEntry: {
+            /** Format: int64 */
+            seq: number;
+            /** Format: date-time */
+            at: string;
+            kind: string;
+            reference: string;
+            memo: string;
+            amount: components["schemas"]["Money"];
+            running: components["schemas"]["Money"];
+            /** Format: uuid */
+            trip_id?: string;
+            trip_code?: string;
+            /** Format: uuid */
+            holder_id?: string;
+            holder?: string;
+        };
+        FinanceAccountEntries: {
+            key: string;
+            entries: components["schemas"]["FinanceAccountEntry"][];
+            total: number;
+            offset: number;
+            limit: number;
+        };
+        FinancePaymentInput: {
+            amount: components["schemas"]["Money"];
+            /** Format: date */
+            paid_on: string;
+            /** @enum {string} */
+            method: "BANK_TRANSFER" | "MOBILE_MONEY" | "CASH" | "CHEQUE" | "OTHER";
+            reference: string;
+            reason: string;
+            /** @description RIDER_REFUNDS: pay these refunds; the amount must be their sum */
+            refund_ids?: string[];
+            /**
+             * Format: uuid
+             * @description RIDER_REFUNDS: pay down one rider's balance
+             */
+            rider_id?: string;
+        };
+        FinancePayment: {
+            /** Format: uuid */
+            id: string;
+            key: string;
+            kind: string;
+            /** Format: uuid */
+            payee_id?: string;
+            /** Format: uuid */
+            rider_id?: string;
+            currency: string;
+            amount: components["schemas"]["Money"];
+            /** Format: date */
+            paid_on: string;
+            method: string;
+            reference: string;
+            reason: string;
+            refund_ids: string[];
+            /** Format: date-time */
+            created_at: string;
+            replayed: boolean;
+        };
+        OwedRiderRefunds: {
+            currency: string;
+            refunds: {
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                trip_id: string;
+                trip_code: string;
+                /** Format: uuid */
+                rider_id: string;
+                rider: string;
+                amount: components["schemas"]["Money"];
+                reason: string;
+                /** Format: date-time */
+                created_at: string;
+            }[];
+            riders: {
+                /** Format: uuid */
+                rider_id: string;
+                rider: string;
+                owed: components["schemas"]["Money"];
+            }[];
         };
         TripRefunds: {
             paid: components["schemas"]["Money"];
@@ -9294,6 +9503,204 @@ export interface operations {
                 };
             };
             400: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+        };
+    };
+    listFinanceAccounts: {
+        parameters: {
+            query?: {
+                /** @description Country whose currency is reported (default the brand's home country) */
+                country?: string;
+                /** @description First day of the period in the country's timezone (default the 1st of this month) */
+                from?: string;
+                /** @description Last day of the period, inclusive (default today) */
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinanceAccounts"];
+                };
+            };
+            400: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+        };
+    };
+    listFinanceAccountEntries: {
+        parameters: {
+            query?: {
+                country?: string;
+                from?: string;
+                to?: string;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Account key: a kind (VAT_PAYABLE) or CHARGES_PAYABLE:<payee id> */
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinanceAccountEntries"];
+                };
+            };
+            400: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            /** @description ACCOUNT_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    exportFinanceAccountEntries: {
+        parameters: {
+            query?: {
+                country?: string;
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description CSV: date, trip, kind, description, holder, reference, amount, running_balance, currency */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            400: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            /** @description ACCOUNT_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    recordFinancePayment: {
+        parameters: {
+            query?: {
+                country?: string;
+            };
+            header: {
+                /** @description A repeated key returns the first payment (200) without posting again */
+                "Idempotency-Key": string;
+            };
+            path: {
+                /** @description VAT_PAYABLE, LEVY_PAYABLE, CHARGES_PAYABLE:<payee id> or RIDER_REFUNDS */
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FinancePaymentInput"];
+            };
+        };
+        responses: {
+            /** @description Replayed: the payment this key already recorded */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinancePayment"];
+                };
+            };
+            /** @description Recorded */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinancePayment"];
+                };
+            };
+            /** @description VALIDATION_FAILED (details.field) or IDEMPOTENCY_KEY_REQUIRED */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            403: components["responses"]["Error"];
+            /** @description ACCOUNT_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description PAYMENT_MORE_THAN_OWED (details.owed), PAYMENT_AMOUNT_MISMATCH (details.expected or below/above), REFUND_NOT_OWED, ACCOUNT_NOT_SETTLEABLE or IDEMPOTENCY_KEY_REUSED */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    listOwedRiderRefunds: {
+        parameters: {
+            query?: {
+                country?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OwedRiderRefunds"];
+                };
+            };
             403: components["responses"]["Error"];
         };
     };
