@@ -10,41 +10,38 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// current is an app's newest notice (false when the brand lists none: no gate).
-func (s *Service) current(app string) (int, bool) {
-	docs := s.docs[app]
-	if len(docs) == 0 {
-		return 0, false
+// latest is an app's newest consent version (nil when the app has none: no gate).
+func (s *Service) latest(ctx context.Context, app string) (*Notice, error) {
+	all, err := s.notices(ctx)
+	if err != nil {
+		return nil, err
 	}
-	return docs[len(docs)-1].Version, true
+	list := all[app]
+	if len(list) == 0 {
+		return nil, nil
+	}
+	return &list[len(list)-1], nil
 }
 
-// Document is an app's current notice in a language (the default language when missing).
-func (s *Service) Document(app, locale string) (*ConsentDocument, bool) {
-	docs := s.docs[app]
-	if len(docs) == 0 {
-		return nil, false
+// Document is an app's current notice in a language (the default language when
+// missing), with the documents it covers. ok is false when the app has none.
+func (s *Service) Document(ctx context.Context, app, locale string) (*ConsentDocument, bool, error) {
+	n, err := s.latest(ctx, app)
+	if err != nil || n == nil {
+		return nil, false, err
 	}
-	d := docs[len(docs)-1]
 	pick := func(m map[string]string) string {
 		if v := m[locale]; v != "" {
 			return v
 		}
 		return m[s.d.Brand.DefaultLocale]
 	}
-	return &ConsentDocument{App: app, Version: d.Version, Title: pick(d.Title), Summary: pick(d.Summary), URL: pick(d.URL), PublishedAt: d.PublishedAt}, true
-}
-
-// SyncDocuments records the brand file's notices (the versions people accept refer to them).
-func (s *Service) SyncDocuments(ctx context.Context) error {
-	for _, docs := range s.docs {
-		for _, d := range docs {
-			if err := s.store.upsertDocument(ctx, d); err != nil {
-				return err
-			}
-		}
+	doc := &ConsentDocument{App: app, Version: n.Version, Title: pick(n.Title), Summary: pick(n.Summary), URL: pick(n.URL),
+		PublishedAt: n.PublishedAt, Links: []ConsentLink{}}
+	for _, l := range n.Links {
+		doc.Links = append(doc.Links, ConsentLink{Kind: l.Kind, Title: pick(l.Title), URL: pick(l.URL)})
 	}
-	return nil
+	return doc, true, nil
 }
 
 func (s *Service) cacheKey(userID, app string) string {
@@ -71,20 +68,23 @@ func (s *Service) accepted(ctx context.Context, userID, app string) (*int, error
 
 // Status is where a person stands with an app's notice.
 func (s *Service) Status(ctx context.Context, userID, app string) (*ConsentStatus, error) {
-	cur, ok := s.current(app)
-	if !ok {
+	n, err := s.latest(ctx, app)
+	if err != nil {
+		return nil, err
+	}
+	if n == nil {
 		return &ConsentStatus{App: app}, nil
 	}
 	acc, err := s.accepted(ctx, userID, app)
 	if err != nil {
 		return nil, err
 	}
-	return &ConsentStatus{App: app, CurrentVersion: cur, AcceptedVersion: acc, Required: acc == nil || *acc < cur}, nil
+	return &ConsentStatus{App: app, CurrentVersion: n.Version, AcceptedVersion: acc, Required: acc == nil || *acc < n.Version}, nil
 }
 
 // Required reports whether a person must accept the app's current notice first.
 func (s *Service) Required(ctx context.Context, userID, app string) (bool, error) {
-	if _, ok := s.current(app); !ok || app == "" {
+	if app == "" {
 		return false, nil
 	}
 	st, err := s.Status(ctx, userID, app)
@@ -96,22 +96,25 @@ func (s *Service) Required(ctx context.Context, userID, app string) (bool, error
 
 // Accept records that a person accepted the current version (append-only).
 func (s *Service) Accept(ctx context.Context, userID string, in AcceptInput) (int, error) {
-	cur, ok := s.current(in.App)
-	if !ok {
+	n, err := s.latest(ctx, in.App)
+	if err != nil {
+		return 0, err
+	}
+	if n == nil {
 		return 0, ErrInvalid
 	}
-	if in.Version != cur {
-		return cur, ErrConsentStale
+	if in.Version != n.Version {
+		return n.Version, ErrConsentStale
 	}
 	install := ""
 	if u, err := uuid.Parse(in.InstallID); err == nil {
 		install = u.String()
 	}
 	if err := s.store.insertConsent(ctx, userID, in, install); err != nil {
-		return cur, err
+		return n.Version, err
 	}
 	if s.d.Redis != nil {
-		s.d.Redis.Set(ctx, s.cacheKey(userID, in.App), cur, ConsentCacheTTL)
+		s.d.Redis.Set(ctx, s.cacheKey(userID, in.App), n.Version, ConsentCacheTTL)
 	}
-	return cur, nil
+	return n.Version, nil
 }

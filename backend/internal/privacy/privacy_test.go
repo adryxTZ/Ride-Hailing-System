@@ -71,7 +71,7 @@ func TestConsentGateAndNewVersion(t *testing.T) {
 	ctx := context.Background()
 	pool, brandID := testPool(t)
 	user := newUser(t, pool, brandID)
-	s := New(Deps{Pool: pool, BrandID: brandID, Brand: testBrand(1)})
+	s := newTest(Deps{Pool: pool, BrandID: brandID, Brand: testBrand(1)})
 	if req, _ := s.Required(ctx, user, AppRider); !req {
 		t.Fatal("a new person must accept first")
 	}
@@ -87,7 +87,7 @@ func TestConsentGateAndNewVersion(t *testing.T) {
 	if req, _ := s.Required(ctx, user, AppDriver); req {
 		t.Fatal("an app without a notice has no gate")
 	}
-	v2 := New(Deps{Pool: pool, BrandID: brandID, Brand: testBrand(1, 2)})
+	v2 := newTest(Deps{Pool: pool, BrandID: brandID, Brand: testBrand(1, 2)})
 	if req, _ := v2.Required(ctx, user, AppRider); !req {
 		t.Fatal("a new version must ask again")
 	}
@@ -110,7 +110,7 @@ func TestDeleteBlockedThenAnonymised(t *testing.T) {
 	if _, err := pool.Exec(ctx, `INSERT INTO sessions (family_id, user_id, app, ip, user_agent) VALUES (gen_random_uuid(), $1, 'DRIVER', '10.0.0.1', 'test')`, user); err != nil {
 		t.Logf("sessions insert skipped: %v", err)
 	}
-	blocked := New(Deps{Pool: pool, BrandID: brandID, Brand: testBrand(1), Money: noMoney{debt: decimal.NewFromInt(500)}})
+	blocked := newTest(Deps{Pool: pool, BrandID: brandID, Brand: testBrand(1), Money: noMoney{debt: decimal.NewFromInt(500)}})
 	r, err := blocked.Create(ctx, user, AppRider, KindDelete)
 	if err != nil {
 		t.Fatal(err)
@@ -121,7 +121,7 @@ func TestDeleteBlockedThenAnonymised(t *testing.T) {
 	if _, err := blocked.Approve(ctx, staff, r.ID, "asked by phone"); err == nil {
 		t.Fatal("debt must block deletion")
 	}
-	s := New(Deps{Pool: pool, BrandID: brandID, Brand: testBrand(1), Money: noMoney{}})
+	s := newTest(Deps{Pool: pool, BrandID: brandID, Brand: testBrand(1), Money: noMoney{}})
 	done, err := s.Approve(ctx, staff, r.ID, "asked by phone")
 	if err != nil || done.Status != StatusDone {
 		t.Fatalf("delete: %v", err)
@@ -145,7 +145,7 @@ func TestDeleteBlockedThenAnonymised(t *testing.T) {
 func TestRetentionRunsOncePerDayAndOnlyOldRows(t *testing.T) {
 	ctx := context.Background()
 	pool, brandID := testPool(t)
-	s := New(Deps{Pool: pool, BrandID: brandID, Brand: testBrand(1)})
+	s := newTest(Deps{Pool: pool, BrandID: brandID, Brand: testBrand(1)})
 	phone := "+2557" + uuid.NewString()[:8]
 	for _, age := range []string{"3 days", "1 hour"} {
 		if _, err := pool.Exec(ctx, `INSERT INTO otp_codes (brand_id, phone, app, code_hash, expires_at) VALUES ($1,$2,'RIDER','x', now() - $3::interval)`, brandID, phone, age); err != nil {
@@ -183,7 +183,7 @@ func TestRetentionRunsOncePerDayAndOnlyOldRows(t *testing.T) {
 func TestEveryRuleRuns(t *testing.T) {
 	ctx := context.Background()
 	pool, brandID := testPool(t)
-	s := New(Deps{Pool: pool, BrandID: brandID, Brand: testBrand(1), Writer: nopWriter{}}) // file rules run their queries too
+	s := newTest(Deps{Pool: pool, BrandID: brandID, Brand: testBrand(1), Writer: nopWriter{}}) // file rules run their queries too
 	long := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)
 	for _, r := range s.rules {
 		n, err := r.Run(ctx, long)
@@ -204,7 +204,7 @@ func TestExportSectionsRun(t *testing.T) {
 	if err := pool.QueryRow(ctx, `SELECT rider_id FROM trips ORDER BY requested_at DESC LIMIT 1`).Scan(&rider); err != nil {
 		t.Skip("no trips")
 	}
-	s := New(Deps{Pool: pool, BrandID: brandID, Brand: testBrand(1)})
+	s := newTest(Deps{Pool: pool, BrandID: brandID, Brand: testBrand(1)})
 	data, err := s.exportData(ctx, rider)
 	if err != nil {
 		t.Fatal(err)

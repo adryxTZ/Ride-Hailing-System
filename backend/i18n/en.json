@@ -176,5 +176,7 @@
   "ACCOUNT_NOT_SETTLEABLE": "Payments can only be recorded on accounts the platform owes.",
   "PAYMENT_MORE_THAN_OWED": "That is more than the platform owes on this account.",
   "PAYMENT_AMOUNT_MISMATCH": "The amount must match the refunds being paid in full.",
-  "REFUND_NOT_OWED": "One of those refunds is already paid or was not found."
+  "REFUND_NOT_OWED": "One of those refunds is already paid or was not found.",
+  "LEGAL_DOCUMENT_NOT_FOUND": "That legal document doesn't exist or isn't published yet.",
+  "LEGAL_NO_DRAFT": "There is no draft to publish or discard. Save a draft first."
 }

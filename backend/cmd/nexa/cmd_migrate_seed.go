@@ -13,6 +13,7 @@ import (
 	"github.com/kalen-limited/hauler-rider/backend/internal/kernel/migrate"
 	"github.com/kalen-limited/hauler-rider/backend/internal/kernel/seed"
 	"github.com/kalen-limited/hauler-rider/backend/internal/pricing"
+	"github.com/kalen-limited/hauler-rider/backend/internal/privacy"
 	"github.com/kalen-limited/hauler-rider/backend/internal/providers/routing"
 )
 
@@ -93,8 +94,17 @@ func runSeed(args []string) error {
 		}
 		slog.Info("areas seeded", "areas", n)
 	}
-	if what != "presets" && what != "brand" && what != "catalog" && what != "pricing" && what != "areas" && what != "all" {
-		return fmt.Errorf("unknown seed target %q (brand|presets|catalog|pricing|areas|all)", what)
+	if what == "legal" || what == "all" {
+		brandID, err := bs.brandID(ctx)
+		if err != nil {
+			return err
+		}
+		if _, err := startLegal(ctx, bs, brandID, privacy.New(privacy.Deps{Pool: bs.pool, BrandID: brandID, Brand: bs.brand}), nil); err != nil {
+			return err
+		}
+	}
+	if what != "presets" && what != "brand" && what != "catalog" && what != "pricing" && what != "areas" && what != "legal" && what != "all" {
+		return fmt.Errorf("unknown seed target %q (brand|presets|catalog|pricing|areas|legal|all)", what)
 	}
 	return nil
 }

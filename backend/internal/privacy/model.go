@@ -39,6 +39,7 @@ const (
 // Settings.
 const (
 	ConsentCacheTTL     = 24 * time.Hour
+	noticeCheckTTL      = 5 * time.Second // how long another instance serves an old consent version
 	ExportLinkTTL       = 24 * time.Hour
 	DownloadURLTTL      = 15 * time.Minute
 	RequestsPerDay      = 3
@@ -60,6 +61,15 @@ type ConsentDocument struct {
 	Summary     string    `json:"summary"`
 	URL         string    `json:"url"`
 	PublishedAt time.Time `json:"published_at"`
+	// Links are the documents this version covers (Privacy Notice, Terms ...).
+	Links []ConsentLink `json:"links"`
+}
+
+// ConsentLink is one document the consent screen links, in the caller's language.
+type ConsentLink struct {
+	Kind  string `json:"kind"`
+	Title string `json:"title"`
+	URL   string `json:"url"`
 }
 
 // ConsentStatus is where a person stands with an app's notice.

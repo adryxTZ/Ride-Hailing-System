@@ -1,11 +1,11 @@
 /**
- * ConsentScreen — "Your privacy": the current Privacy Notice's summary and the
+ * ConsentScreen — "Your privacy": the current Privacy Notice's summary, links to it and the other texts it covers (Terms ...), and the
  * three choices (agree, read the full notice, decline and sign out). Shown by the
  * auth gate after sign-in, on start, or when a call answers CONSENT_REQUIRED.
  * Accepting clears the flag and the gate takes the person on; declining signs
  * out without storing anything.
  */
-import { isConsentUpdate } from "@platform/auth";
+import { type ConsentDocument, isConsentUpdate } from "@platform/auth";
 import { Button, Icon, ScalePressable, Screen, Text, useTheme, withAlpha } from "@platform/ui";
 import { useState } from "react";
 import { ActivityIndicator, Linking, StyleSheet, View } from "react-native";
@@ -17,6 +17,11 @@ import { auth } from "@/services/api";
 const ENTER_MS = 260;
 const ENTER_STAGGER_MS = 60;
 const enter = (i: number) => FadeInDown.delay(i * ENTER_STAGGER_MS).duration(ENTER_MS);
+
+/** The other documents this consent covers (Terms ...); the Privacy Notice has its own button. */
+function otherLinks(doc?: ConsentDocument): ConsentDocument["links"] {
+  return (doc?.links ?? []).filter((l) => l.kind !== "PRIVACY_NOTICE" && l.url);
+}
 
 export function ConsentScreen() {
   const { palette } = useTheme();
@@ -68,6 +73,17 @@ export function ConsentScreen() {
           disabled={!doc}
           onPress={() => doc && void Linking.openURL(doc.url)}
         />
+        {otherLinks(doc).map((l) => (
+          <ScalePressable
+            key={l.kind}
+            accessibilityRole="link"
+            accessibilityLabel={`Read the ${l.title}`}
+            onPress={() => void Linking.openURL(l.url)}
+            style={styles.link}
+          >
+            <Text style={[styles.linkText, { color: palette.primary }]}>{`Read the ${l.title}`}</Text>
+          </ScalePressable>
+        ))}
         <ScalePressable
           accessibilityRole="button"
           accessibilityLabel="Decline and sign out"
@@ -96,6 +112,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     elevation: 2,
   },
+  link: { minHeight: 44, alignItems: "center", justifyContent: "center" },
+  linkText: { fontWeight: "600" },
   decline: { minHeight: 44, alignItems: "center", justifyContent: "center" },
   declineText: { fontWeight: "600" },
 });

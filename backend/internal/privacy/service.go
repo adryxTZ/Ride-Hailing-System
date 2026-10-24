@@ -10,6 +10,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/kalen-limited/hauler-rider/backend/internal/kernel/brand"
+	"github.com/kalen-limited/hauler-rider/backend/internal/kernel/cache"
 	"github.com/kalen-limited/hauler-rider/backend/internal/providers/storage"
 )
 
@@ -27,29 +28,31 @@ type Deps struct {
 	// EnqueueExportTx queues the export job in the approving transaction.
 	EnqueueExportTx func(ctx context.Context, tx pgx.Tx, requestID string) error
 	Location        *time.Location // the brand's home timezone (retention time of day)
+	// Notices replaces the consent versions read from the database (tests).
+	Notices NoticeSource
 }
+
+// noticeScope is the config_versions scope that publishing a legal text bumps.
+const noticeScope = "legal"
 
 // Service is the privacy use cases for one brand.
 type Service struct {
 	d     Deps
 	store store
-	docs  map[string][]brand.ConsentDoc // per app, newest version last
+	cache *cache.Versioned[map[string][]Notice] // consent versions per app, oldest first
 	rules []Rule
 	now   func() time.Time
 }
 
 // New builds the service; the retention rules take the brand's day overrides.
+// Consent versions live in the database (the legal module publishes them);
+// the brand file's only seed an app that has none.
 func New(d Deps) *Service {
 	if d.Location == nil {
 		d.Location = time.UTC
 	}
-	s := &Service{d: d, store: store{pool: d.Pool, brandID: d.BrandID}, docs: map[string][]brand.ConsentDoc{}, now: time.Now}
-	for _, doc := range d.Brand.Legal.Consent {
-		s.docs[doc.App] = append(s.docs[doc.App], doc)
-	}
-	for app := range s.docs {
-		sortByVersion(s.docs[app])
-	}
+	s := &Service{d: d, store: store{pool: d.Pool, brandID: d.BrandID}, now: time.Now}
+	s.cache = cache.New(noticeScope, s.store, s.store.notices, noticeCheckTTL)
 	s.rules = s.retentionRules(d.Brand.Privacy.Retention)
 	return s
 }
@@ -63,12 +66,4 @@ func AppOf(tokenApp string) string {
 		return AppDriver
 	}
 	return ""
-}
-
-func sortByVersion(docs []brand.ConsentDoc) {
-	for i := 1; i < len(docs); i++ {
-		for j := i; j > 0 && docs[j].Version < docs[j-1].Version; j-- {
-			docs[j], docs[j-1] = docs[j-1], docs[j]
-		}
-	}
 }

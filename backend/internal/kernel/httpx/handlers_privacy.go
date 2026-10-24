@@ -1,9 +1,6 @@
 package httpx
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -78,21 +75,22 @@ func (h privacyHandlers) document(w http.ResponseWriter, req *http.Request) {
 	if cat := messagesFrom(req.Context()); cat != nil {
 		lang = cat.Pick(req.Header.Get("Accept-Language"))
 	}
-	doc, ok := h.deps.Privacy.Document(strings.ToUpper(req.URL.Query().Get("app")), lang)
+	doc, ok, err := h.deps.Privacy.Document(req.Context(), strings.ToUpper(req.URL.Query().Get("app")), lang)
+	if err != nil {
+		writeDomainError(w, req, err)
+		return
+	}
 	if !ok {
 		writeError(w, req, privacy.ErrNotFound, nil)
 		return
 	}
-	sum := sha256.Sum256([]byte(fmt.Sprintf("%s/%d/%s/%s/%s", doc.App, doc.Version, lang, doc.Title, doc.Summary)))
-	etag := `"` + hex.EncodeToString(sum[:8]) + `"`
-	w.Header().Set("ETag", etag)
-	w.Header().Set("Cache-Control", consentCacheS)
-	w.Header().Set("Vary", "Accept-Language")
-	if req.Header.Get("If-None-Match") == etag {
-		w.WriteHeader(http.StatusNotModified)
-		return
+	// The legal pages' links are stored relative to the API (it may sit at any address).
+	doc.URL = apiLink(req, h.deps, doc.URL)
+	for i := range doc.Links {
+		doc.Links[i].URL = apiLink(req, h.deps, doc.Links[i].URL)
 	}
-	writeJSON(w, http.StatusOK, doc)
+	w.Header().Set("Vary", "Accept-Language")
+	writeJSONCached(w, req, doc, consentCacheS)
 }
 
 type acceptBody struct {

@@ -16,6 +16,7 @@ import {
   Percent,
   Receipt,
   Route,
+  Scale,
   ScanSearch,
   Settings,
   ShieldAlert,
@@ -105,7 +106,10 @@ export const NAV_GROUPS: NavGroup[] = [
     title: "Settings",
     collapsible: true,
     icon: Settings,
-    items: [{ href: "/settings/branding", label: "Branding", icon: Palette }],
+    items: [
+      { href: "/settings/branding", label: "Branding", icon: Palette },
+      { href: "/settings/legal", label: "Legal", icon: Scale },
+    ],
   },
 ];
 

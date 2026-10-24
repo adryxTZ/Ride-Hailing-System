@@ -9,24 +9,12 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
-
-	"github.com/kalen-limited/hauler-rider/backend/internal/kernel/brand"
 )
 
-// store holds the queries; no rules here.
+// store holds the queries; no rules here (consent versions: store_notices.go).
 type store struct {
 	pool    *pgxpool.Pool
 	brandID string
-}
-
-func (s store) upsertDocument(ctx context.Context, d brand.ConsentDoc) error {
-	title, _ := json.Marshal(d.Title)
-	summary, _ := json.Marshal(d.Summary)
-	url, _ := json.Marshal(d.URL)
-	_, err := s.pool.Exec(ctx, `INSERT INTO consent_documents (brand_id, app, version, title, summary, url, published_at) VALUES ($1,$2,$3,$4,$5,$6,$7)
-		ON CONFLICT (brand_id, app, version) DO UPDATE SET title=EXCLUDED.title, summary=EXCLUDED.summary, url=EXCLUDED.url, published_at=EXCLUDED.published_at`,
-		s.brandID, d.App, d.Version, title, summary, url, d.PublishedAt)
-	return err
 }
 
 func (s store) acceptedVersion(ctx context.Context, userID, app string) (*int, error) {

@@ -54,10 +54,7 @@ func startPrivacy(ctx context.Context, bs *bootstrap, brandID string, pw privacy
 	if p != nil {
 		d.Offline = p.Offline
 	}
-	svc := privacy.New(d)
-	if err := svc.SyncDocuments(ctx); err != nil {
-		return nil, fmt.Errorf("consent documents: %w", err)
-	}
+	svc := privacy.New(d) // consent versions are seeded with the legal texts (startLegal)
 	pw.export.Svc, pw.retention.Svc = svc, svc
 	return svc, nil
 }

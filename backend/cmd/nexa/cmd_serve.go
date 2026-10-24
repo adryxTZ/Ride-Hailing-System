@@ -155,6 +155,10 @@ func runServe(args []string) error {
 	}
 	profileSvc := profile.New(bs.pool)
 	brandingSvc := branding.New(bs.pool, brandID, files, bs.presets, th)
+	legalSvc, err := startLegal(ctx, bs, brandID, privacySvc, brandingSvc)
+	if err != nil {
+		return err
+	}
 	peopleSvc := newPeople(bs, peopleModules{ident: ident, trips: tripSvc, dispatch: dispatcher, msg: messagingSvc, safety: safetySvc,
 		profile: profileSvc, presence: presenceSvc, ledger: ledger, holds: holdSvc, payouts: payoutSvc, payins: paySvc, fleet: fleetSvc})
 
@@ -196,6 +200,7 @@ func runServe(args []string) error {
 		Privacy:       privacySvc,
 		Refunds:       newRefunds(bs, brandID, ledger, tripSvc),
 		Accounts:      accounts.New(bs.pool, brandID, ledger),
+		Legal:         legalSvc,
 		Trips:         tripSvc,
 		Presence:      presenceSvc,
 		Hub:           hub,

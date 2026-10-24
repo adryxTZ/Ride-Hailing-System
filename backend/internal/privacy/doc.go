@@ -1,7 +1,7 @@
 // Package privacy is data protection (spec 2026-10-23-compliance-trust.md, S4):
 //
 //   - consent: riders and drivers accept a versioned privacy notice per app
-//     (texts are brand data); booking, going online and submitting an
+//     (versions published by the legal module); booking, going online and submitting an
 //     application need the current version; a new version asks again;
 //
 //   - requests: a person asks for an export or for deletion; staff approve or
@@ -14,6 +14,11 @@
 //   - model.go      types, constants, error codes
 //
 //   - consent.go    current versions, status, accept, the gate check (Redis, then Postgres)
+//
+//   - notices.go    consent versions from the database (cached on the "legal" scope);
+//     new versions written by the legal module's publish, brand-file seeding
+//
+//   - store_notices.go  consent version persistence
 //
 //   - requests.go   create, list, cancel, download; staff approve and reject
 //

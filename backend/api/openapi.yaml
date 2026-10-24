@@ -2388,6 +2388,149 @@ paths:
                         rows_last_run: { type: integer }
                         error: { type: [string, "null"] }
         "403": { $ref: "#/components/responses/Error" }
+  /legal/{app}/{kind}:
+    get:
+      tags: [public]
+      security: []
+      operationId: getLegalPage
+      summary: "A live legal document: sanitised HTML (no script runs), or JSON with format=json (ETag, 5-minute public cache)"
+      parameters:
+        - $ref: "#/components/parameters/LegalApp"
+        - $ref: "#/components/parameters/LegalKind"
+        - { name: lang, in: query, schema: { type: string, example: sw }, description: "Language; default from Accept-Language, then the brand's default" }
+        - { name: format, in: query, schema: { type: string, enum: [json] } }
+        - $ref: "#/components/parameters/AcceptLanguage"
+      responses:
+        "200":
+          description: OK
+          content:
+            text/html:
+              schema: { type: string }
+            application/json:
+              schema: { $ref: "#/components/schemas/LegalPage" }
+        "304": { description: Not modified }
+        "404": { $ref: "#/components/responses/Error" }
+  /admin/legal:
+    get:
+      tags: [admin]
+      operationId: getLegalOverview
+      summary: "The Legal page: every app's documents (live version, draft), the Legal details and the placeholders (legal.manage)"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LegalOverview" }
+        "403": { $ref: "#/components/responses/Error" }
+  /admin/legal/details:
+    put:
+      tags: [admin]
+      operationId: setLegalDetails
+      summary: "Replace the placeholder values staff fill in (audited, reason required)"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LegalDetailsInput" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LegalDetails" }
+        "400": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+  /admin/legal/preview:
+    post:
+      tags: [admin]
+      operationId: previewLegalDocument
+      summary: "Render an unsaved text in one language as it would read if published today (placeholders filled)"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LegalPreviewInput" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LegalPreview" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+  /admin/legal/{app}/{kind}:
+    get:
+      tags: [admin]
+      operationId: getLegalVersions
+      summary: "One document's versions, newest first, with their texts (for the editor and the diff)"
+      parameters:
+        - $ref: "#/components/parameters/LegalApp"
+        - $ref: "#/components/parameters/LegalKind"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LegalVersions" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+  /admin/legal/{app}/{kind}/draft:
+    put:
+      tags: [admin]
+      operationId: saveLegalDraft
+      summary: "Create the next version as a draft, or replace the open draft (audited)"
+      parameters:
+        - $ref: "#/components/parameters/LegalApp"
+        - $ref: "#/components/parameters/LegalKind"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LegalDraftInput" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LegalDocument" }
+        "400": { description: "VALIDATION_FAILED; details.fields codes NOT_ALLOWED, LENGTH, UNKNOWN_PLACEHOLDER", content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+    delete:
+      tags: [admin]
+      operationId: deleteLegalDraft
+      summary: "Discard the open draft (audited)"
+      parameters:
+        - $ref: "#/components/parameters/LegalApp"
+        - $ref: "#/components/parameters/LegalKind"
+      responses:
+        "204": { description: Discarded }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { description: LEGAL_NO_DRAFT, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+  /admin/legal/{app}/{kind}/publish:
+    post:
+      tags: [admin]
+      operationId: publishLegalDocument
+      summary: "Publish the draft (reason required, audited); the live version is archived. For a document people accept, the app's consent version moves on and everyone is asked to accept again"
+      parameters:
+        - $ref: "#/components/parameters/LegalApp"
+        - $ref: "#/components/parameters/LegalKind"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReasonInput" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LegalDocument" }
+        "400": { description: "REASON_REQUIRED, or VALIDATION_FAILED (title or body missing in a brand language)", content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { description: LEGAL_NO_DRAFT, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
   /admin/fraud/flags:
     get:
       tags: [admin]
@@ -3683,6 +3826,16 @@ components:
       name: X-App-Version
       in: header
       schema: { type: string, example: 1.0.0 }
+    LegalApp:
+      name: app
+      in: path
+      required: true
+      schema: { type: string, enum: [rider, driver, RIDER, DRIVER] }
+    LegalKind:
+      name: kind
+      in: path
+      required: true
+      schema: { type: string, enum: [privacy-notice, terms, driver-agreement, PRIVACY_NOTICE, TERMS, DRIVER_AGREEMENT] }
     InstallId:
       name: X-Install-Id
       in: header
@@ -5429,14 +5582,15 @@ components:
               paid_at: { type: [string, "null"], format: date-time }
     ConsentDocument:
       type: object
-      required: [app, version, title, summary, url, published_at]
+      required: [app, version, title, summary, url, published_at, links]
       properties:
         app: { type: string, enum: [RIDER, DRIVER] }
         version: { type: integer }
         title: { type: string }
         summary: { type: string }
-        url: { type: string, description: "The full Privacy Notice and Terms" }
+        url: { type: string, description: "The Privacy Notice's public page" }
         published_at: { type: string, format: date-time }
+        links: { type: array, items: { $ref: "#/components/schemas/ConsentLink" }, description: "Every document this version covers (Privacy Notice, Terms, Driver Agreement)" }
     ConsentStatus:
       type: object
       required: [app, current_version, required]
@@ -5445,6 +5599,128 @@ components:
         current_version: { type: integer }
         accepted_version: { type: [integer, "null"] }
         required: { type: boolean }
+    ConsentLink:
+      type: object
+      required: [kind, title, url]
+      properties:
+        kind: { type: string, enum: [PRIVACY_NOTICE, TERMS, DRIVER_AGREEMENT] }
+        title: { type: string }
+        url: { type: string, description: "The document's public page (GET /legal/{app}/{kind})" }
+    LegalDocument:
+      type: object
+      required: [id, app, kind, version, status, title, summary, body, source, created_at, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        app: { type: string, enum: [RIDER, DRIVER] }
+        kind: { type: string, enum: [PRIVACY_NOTICE, TERMS, DRIVER_AGREEMENT] }
+        version: { type: integer }
+        status: { type: string, enum: [DRAFT, PUBLISHED, ARCHIVED] }
+        title: { $ref: "#/components/schemas/LocalizedText" }
+        summary: { $ref: "#/components/schemas/LocalizedText" }
+        body: { $ref: "#/components/schemas/LocalizedText" }
+        source: { type: string, enum: [STARTER, STAFF], description: "STARTER = the starter pack's template, to be reviewed by a lawyer" }
+        change_reason: { type: [string, "null"] }
+        created_by: { type: [string, "null"] }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        published_by: { type: [string, "null"] }
+        published_at: { type: [string, "null"], format: date-time }
+    LegalVersionRef:
+      type: object
+      required: [id, version, source, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        version: { type: integer }
+        source: { type: string, enum: [STARTER, STAFF] }
+        updated_at: { type: string, format: date-time }
+        published_at: { type: [string, "null"], format: date-time }
+    LegalOverviewItem:
+      type: object
+      required: [app, kind, slug, consent, title, live, draft]
+      properties:
+        app: { type: string, enum: [RIDER, DRIVER] }
+        kind: { type: string, enum: [PRIVACY_NOTICE, TERMS, DRIVER_AGREEMENT] }
+        slug: { type: string }
+        consent: { type: boolean, description: "People accept it: publishing asks them again" }
+        title: { type: string }
+        live: { oneOf: [{ $ref: "#/components/schemas/LegalVersionRef" }, { type: "null" }] }
+        draft: { oneOf: [{ $ref: "#/components/schemas/LegalVersionRef" }, { type: "null" }] }
+    LegalPlaceholder:
+      type: object
+      required: [key, label, source, value]
+      properties:
+        key: { type: string, example: dpo_email }
+        label: { type: string }
+        hint: { type: string }
+        source: { type: string, enum: [BRAND, COUNTRY, DETAILS, DOCUMENT], description: "DETAILS = filled on the Legal details form" }
+        value: { type: string, description: "Today's value (empty = missing)" }
+    LegalDetails:
+      type: object
+      required: [fields]
+      properties:
+        fields: { type: object, additionalProperties: { type: string } }
+        updated_by: { type: [string, "null"] }
+        updated_at: { type: [string, "null"], format: date-time }
+    LegalDetailsInput:
+      type: object
+      required: [fields, reason]
+      properties:
+        fields: { type: object, additionalProperties: { type: string }, description: "Only the DETAILS placeholders' keys" }
+        reason: { type: string }
+    LegalOverview:
+      type: object
+      required: [documents, details, placeholders, locales, default_locale]
+      properties:
+        documents: { type: array, items: { $ref: "#/components/schemas/LegalOverviewItem" } }
+        details: { $ref: "#/components/schemas/LegalDetails" }
+        placeholders: { type: array, items: { $ref: "#/components/schemas/LegalPlaceholder" } }
+        locales: { type: array, items: { type: string } }
+        default_locale: { type: string }
+    LegalVersions:
+      type: object
+      required: [app, kind, slug, consent, page_url, versions]
+      properties:
+        app: { type: string, enum: [RIDER, DRIVER] }
+        kind: { type: string, enum: [PRIVACY_NOTICE, TERMS, DRIVER_AGREEMENT] }
+        slug: { type: string }
+        consent: { type: boolean }
+        page_url: { type: string, description: "The public page in the default language" }
+        versions: { type: array, items: { $ref: "#/components/schemas/LegalDocument" } }
+    LegalDraftInput:
+      type: object
+      properties:
+        title: { $ref: "#/components/schemas/LocalizedText" }
+        summary: { $ref: "#/components/schemas/LocalizedText" }
+        body: { $ref: "#/components/schemas/LocalizedText" }
+    LegalPreviewInput:
+      type: object
+      required: [app, kind, lang, body]
+      properties:
+        app: { type: string, enum: [RIDER, DRIVER] }
+        kind: { type: string, enum: [PRIVACY_NOTICE, TERMS, DRIVER_AGREEMENT] }
+        lang: { type: string }
+        title: { $ref: "#/components/schemas/LocalizedText" }
+        body: { $ref: "#/components/schemas/LocalizedText" }
+    LegalPreview:
+      type: object
+      required: [html, missing, unknown]
+      properties:
+        html: { type: string, description: "Sanitised HTML" }
+        missing: { type: array, items: { type: string }, description: "Placeholders without a value" }
+        unknown: { type: array, items: { type: string }, description: "Placeholders not in the catalogue" }
+    LegalPage:
+      type: object
+      required: [app, kind, version, lang, title, html, effective_date, published_at, brand]
+      properties:
+        app: { type: string, enum: [RIDER, DRIVER] }
+        kind: { type: string, enum: [PRIVACY_NOTICE, TERMS, DRIVER_AGREEMENT] }
+        version: { type: integer }
+        lang: { type: string }
+        title: { type: string }
+        html: { type: string, description: "Sanitised HTML" }
+        effective_date: { type: string, example: "24 October 2026" }
+        published_at: { type: string, format: date-time }
+        brand: { type: string }
     PrivacyRequest:
       type: object
       required: [id, app, kind, status, created_at, due_at, blockers, overdue]

@@ -176,5 +176,7 @@
   "ACCOUNT_NOT_SETTLEABLE": "Malipo yanaweza kurekodiwa tu kwenye akaunti ambazo jukwaa linadaiwa.",
   "PAYMENT_MORE_THAN_OWED": "Kiasi hicho ni zaidi ya kile jukwaa linadaiwa kwenye akaunti hii.",
   "PAYMENT_AMOUNT_MISMATCH": "Kiasi lazima kilingane na marejesho yanayolipwa kikamilifu.",
-  "REFUND_NOT_OWED": "Mojawapo ya marejesho hayo tayari limelipwa au halijapatikana."
+  "REFUND_NOT_OWED": "Mojawapo ya marejesho hayo tayari limelipwa au halijapatikana.",
+  "LEGAL_DOCUMENT_NOT_FOUND": "Hati hiyo ya kisheria haipo au bado haijachapishwa.",
+  "LEGAL_NO_DRAFT": "Hakuna rasimu ya kuchapisha au kufuta. Hifadhi rasimu kwanza."
 }
