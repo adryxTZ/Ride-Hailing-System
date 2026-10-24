@@ -1,6 +1,6 @@
 "use client";
 /** GeofenceScreen — one geofence: its shape on the map, redraw (a new version), rename, switch off, its profile and versions. */
-import { ArrowLeft, PenLine, Undo2 } from "lucide-react";
+import { ArrowLeft, PenLine } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
@@ -11,10 +11,12 @@ import { ReasonDialog } from "@/components/ui/ReasonDialog";
 import { ErrorNote, Skeleton } from "@/components/ui/States";
 import { Cell, Row, Table } from "@/components/ui/Table";
 import { useMe } from "@/features/me";
+import type { Schemas } from "@/lib/api";
 import { when } from "@/lib/format";
 import { type Draft, GeofenceMap } from "./GeofenceMap";
 import { useGeofence, useReshape, useUpdateGeofence } from "./hooks";
 import { areaText, KIND_LABEL, STATUS } from "./labels";
+import { PolygonTools } from "./PolygonTools";
 import { polygonFrom } from "./shapes";
 
 type Ask = "reshape" | "status";
@@ -72,6 +74,11 @@ export function GeofenceScreen({ id }: { id: string }) {
                   </span>
                 )}
               </p>
+              {drawing && f.kind !== "PLACE" ? (
+                <div className="mt-4">
+                  <PolygonTools draft={draft} onDraft={setDraft} />
+                </div>
+              ) : null}
               {editable && f.status !== "ARCHIVED" ? (
                 <div className="mt-4 flex flex-wrap gap-2">
                   {drawing ? (
@@ -79,16 +86,6 @@ export function GeofenceScreen({ id }: { id: string }) {
                       <Button disabled={!ready} onClick={() => setAsk("reshape")}>
                         Save new shape
                       </Button>
-                      {f.kind !== "PLACE" ? (
-                        <Button
-                          variant="ghost"
-                          icon={<Undo2 size={14} aria-hidden="true" />}
-                          disabled={!draft.points.length}
-                          onClick={() => setDraft({ ...draft, points: draft.points.slice(0, -1) })}
-                        >
-                          Undo
-                        </Button>
-                      ) : null}
                       <Button
                         variant="ghost"
                         onClick={() => {
@@ -106,10 +103,10 @@ export function GeofenceScreen({ id }: { id: string }) {
                         icon={<PenLine size={15} aria-hidden="true" />}
                         onClick={() => {
                           setDrawing(true);
-                          setDraft({ points: [], radiusM: f.radius_m ?? 500 });
+                          setDraft({ points: outline(f), radiusM: f.radius_m ?? 500 }); // start from the current shape
                         }}
                       >
-                        Redraw
+                        Edit shape
                       </Button>
                       <Button
                         variant={f.status === "ACTIVE" ? "ghost" : "primary"}
@@ -213,4 +210,12 @@ export function GeofenceScreen({ id }: { id: string }) {
       />
     </div>
   );
+}
+
+/** A polygon geofence's outer ring as editable corners (without the closing point); [] for places or several parts. */
+function outline(f: Schemas["Geofence"]): [number, number][] {
+  const polys = f.geometry?.coordinates ?? [];
+  if (polys.length !== 1) return [];
+  const ring = polys[0][0] ?? [];
+  return ring.slice(0, -1).map((p) => [p[0], p[1]] as [number, number]);
 }

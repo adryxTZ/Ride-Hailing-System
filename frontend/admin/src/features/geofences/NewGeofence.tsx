@@ -9,6 +9,7 @@ import { ErrorNote } from "@/components/ui/States";
 import type { Draft } from "./GeofenceMap";
 import { type Kind, useCreateGeofence } from "./hooks";
 import { KIND_HINT, KIND_LABEL } from "./labels";
+import { PolygonTools } from "./PolygonTools";
 import { polygonFrom } from "./shapes";
 
 const RADIUS = { min: 50, max: 5000, step: 50 };
@@ -77,18 +78,7 @@ export function NewGeofence({
           </span>
         </label>
       ) : (
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-muted">{`${draft.points.length} corners · click the map to add`}</span>
-          <Button
-            size="sm"
-            variant="ghost"
-            icon={<Undo2 size={14} aria-hidden="true" />}
-            disabled={!draft.points.length}
-            onClick={() => onDraft({ ...draft, points: draft.points.slice(0, -1) })}
-          >
-            Undo
-          </Button>
-        </div>
+        <PolygonTools draft={draft} onDraft={onDraft} />
       )}
       <Button disabled={!shapeReady || !name.trim() || code.length < 2} onClick={() => setAsking(true)}>
         Save geofence

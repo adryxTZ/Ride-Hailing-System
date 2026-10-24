@@ -185,6 +185,9 @@ func (s *Service) Publish(ctx context.Context, staffID, id string, in VersionInp
 	if err != nil {
 		return nil, err
 	}
+	if in.Charges, err = s.withDefaultRecipients(ctx, p.Country, in.Charges); err != nil { // a charge without a recipient takes its kind's default
+		return nil, err
+	}
 	var vid string
 	err = s.write(ctx, p.Country, in.Reason, func(tx pgx.Tx) error {
 		def, err := s.isDefault(ctx, tx, id)

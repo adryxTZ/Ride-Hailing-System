@@ -151,3 +151,31 @@ export const useUpdatePayee = () =>
       }),
     ),
   );
+
+/** Who receives each kind of charge by default in a country. */
+export function useChargeDefaults(country: string) {
+  return useQuery({
+    queryKey: [...KEY, "charge-defaults", country],
+    queryFn: async () =>
+      unwrap(await api.GET("/admin/pricing/charge-defaults", { params: { query: { country } } })).data,
+    enabled: !!country,
+  });
+}
+
+export function useSetChargeDefault() {
+  return useWrite(
+    async (v: {
+      country: string;
+      category: Schemas["ChargeDefault"]["category"];
+      recipient: Schemas["ChargeDefault"]["recipient"];
+      payee_id?: string;
+      reason: string;
+    }) =>
+      unwrap(
+        await api.PUT("/admin/pricing/charge-defaults/{category}", {
+          params: { path: { category: v.category } },
+          body: { country: v.country, recipient: v.recipient, payee_id: v.payee_id, reason: v.reason },
+        }),
+      ).data,
+  );
+}

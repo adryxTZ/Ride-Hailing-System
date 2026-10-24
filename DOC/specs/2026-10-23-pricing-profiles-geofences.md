@@ -716,3 +716,9 @@ The file is `NO TRANSACTION` because of `ALTER TYPE`, so every statement is idem
   brand-check, redocly valid, admin tsc + Biome, `e2e-pricing-history.mjs` PASS, and e2e pricing-profiles,
   geofences and fares re-run PASS. Known limit (as specified): regions use today's cells (`approximate` flag);
   tariffs in a simulation are today's.
+- 2026-10-24 owner answers: tolls and parking are the driver's expenses → built-in default recipient DRIVER (also
+  airport and entry fees; LEVY → a payee; NIGHT/OTHER → part of the fare), configurable per country and kind
+  (`00043_charge_defaults.sql`, `profiles/charge_defaults.go`, GET/PUT `/admin/pricing/charge-defaults`, admin
+  "Payees and defaults" tab; the charge editor pre-fills the recipient when a kind is picked; a charge saved
+  without a recipient takes the default). Geofence drawing: rectangle tool, drag corners to move them, Clear, and
+  "Edit shape" starts from the current outline instead of an empty drawing.

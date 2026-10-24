@@ -31,13 +31,14 @@ import { count, when } from "@/lib/format";
 import { useScope } from "@/lib/scope";
 import { useUrlState } from "@/lib/urlState";
 import { useScopeLabel } from "../scopeLabel";
+import { ChargeDefaultsCard } from "./ChargeDefaultsCard";
 import { useCreateProfile, useProfiles } from "./hooks";
 import { STATUS_LABEL, STATUS_TONE } from "./model";
 import { PayeesCard } from "./PayeesCard";
 
 const TABS = [
   { value: "profiles", label: "Pricing profiles" },
-  { value: "payees", label: "Payees" },
+  { value: "payees", label: "Payees and defaults" },
 ] as const;
 export function ProfilesScreen() {
   return (
@@ -155,9 +156,14 @@ function Profiles() {
         </div>
       ) : null}
       {tab === "payees" ? (
-        <Card title="Charge payees">
-          <PayeesCard country={scope.country} editable={editable} />
-        </Card>
+        <div className="grid gap-4">
+          <Card title="Who receives each kind of charge">
+            <ChargeDefaultsCard country={scope.country} editable={editable} />
+          </Card>
+          <Card title="Charge payees" index={1}>
+            <PayeesCard country={scope.country} editable={editable} />
+          </Card>
+        </div>
       ) : (
         <section
           aria-label="Pricing profiles"

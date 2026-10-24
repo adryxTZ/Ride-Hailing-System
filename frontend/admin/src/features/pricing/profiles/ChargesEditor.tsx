@@ -13,6 +13,8 @@ import { Field, Input, Select } from "@/components/ui/Field";
 import { Empty } from "@/components/ui/States";
 import type { Schemas } from "@/lib/api";
 import { useClassKeys, useClassName } from "@/lib/catalog";
+import { useScope } from "@/lib/scope";
+import { useChargeDefaults } from "./hooks";
 import {
   AMOUNT_TYPE_LABEL,
   CATEGORY_LABEL,
@@ -123,6 +125,17 @@ function ChargeForm({
 }) {
   const className = useClassName();
   const classes = useClassKeys();
+  const { scope } = useScope();
+  const { data: defaults } = useChargeDefaults(scope.country);
+  // Picking a kind takes its default recipient (tolls and parking go to the driver unless changed).
+  const pickCategory = (category: Charge["category"]) => {
+    const d = defaults?.find((x) => x.category === category);
+    set(
+      d
+        ? { category, recipient: d.recipient, payee_id: d.payee_id ?? undefined, taxable: false }
+        : { category },
+    );
+  };
   const set = (patch: Partial<Charge>) => onChange({ ...c, ...patch });
   const toggle = <T,>(list: T[] | undefined, v: T) =>
     (list ?? []).includes(v) ? (list ?? []).filter((x) => x !== v) : [...(list ?? []), v];
@@ -149,7 +162,7 @@ function ChargeForm({
         />
       </Field>
       <Field label="Kind">
-        <Select value={c.category} onChange={(e) => set({ category: e.target.value as Charge["category"] })}>
+        <Select value={c.category} onChange={(e) => pickCategory(e.target.value as Charge["category"])}>
           {Object.entries(CATEGORY_LABEL).map(([k, v]) => (
             <option key={k} value={k}>
               {v}

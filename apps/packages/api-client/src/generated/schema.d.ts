@@ -2098,6 +2098,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/pricing/charge-defaults": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Who receives each kind of extra charge by default in a country (built-in: tolls, parking, airport and entry fees go to the driver) */
+        get: operations["getChargeDefaults"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/pricing/charge-defaults/{category}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Change who receives a kind of charge by default (fees.edit, audited); new charges without a recipient take it */
+        put: operations["setChargeDefault"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/pricing/as-of": {
         parameters: {
             query?: never;
@@ -4517,7 +4551,7 @@ export interface components {
             min_amount?: components["schemas"]["Money"];
             max_amount?: components["schemas"]["Money"];
             /**
-             * @description FARE: split like the fare; DRIVER: passed through; THIRD_PARTY: owed to the payee
+             * @description FARE: split like the fare; DRIVER: passed through; THIRD_PARTY: owed to the payee. Sent empty, the server uses the charge kind's default (GET /admin/pricing/charge-defaults)
              * @enum {string}
              */
             recipient: "FARE" | "PLATFORM" | "DRIVER" | "THIRD_PARTY";
@@ -4681,6 +4715,16 @@ export interface components {
             finalized_at?: string | null;
             /** @description Whether the stored hash still matches the record */
             seal_valid?: boolean | null;
+        };
+        ChargeDefault: {
+            /** @enum {string} */
+            category: "TOLL" | "PARKING" | "LEVY" | "AIRPORT_FEE" | "ENTRY_FEE" | "NIGHT" | "OTHER";
+            /** @enum {string} */
+            recipient: "FARE" | "PLATFORM" | "DRIVER" | "THIRD_PARTY";
+            payee_id?: string | null;
+            payee_name?: string | null;
+            /** @description false = the built-in default */
+            custom: boolean;
         };
         TripRefunds: {
             paid: components["schemas"]["Money"];
@@ -8922,6 +8966,68 @@ export interface operations {
             400: components["responses"]["Error"];
             403: components["responses"]["Error"];
             404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+        };
+    };
+    getChargeDefaults: {
+        parameters: {
+            query?: {
+                country?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ChargeDefault"][];
+                    };
+                };
+            };
+        };
+    };
+    setChargeDefault: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                category: "TOLL" | "PARKING" | "LEVY" | "AIRPORT_FEE" | "ENTRY_FEE" | "NIGHT" | "OTHER";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    country?: string;
+                    /** @enum {string} */
+                    recipient: "FARE" | "PLATFORM" | "DRIVER" | "THIRD_PARTY";
+                    /** Format: uuid */
+                    payee_id?: string;
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ChargeDefault"][];
+                    };
+                };
+            };
+            400: components["responses"]["Error"];
+            403: components["responses"]["Error"];
             409: components["responses"]["Error"];
         };
     };

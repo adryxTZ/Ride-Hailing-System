@@ -2,7 +2,8 @@
 /**
  * GeofenceMap — every geofence of the country (districts, zones, places as
  * circles), the selected one highlighted, and the shape being drawn: click to
- * add a corner (polygon) or to place a centre (place). Colours are tokens.
+ * add a corner (or two opposite corners with the rectangle tool), drag a corner
+ * to move it, or click to place a centre (place). Colours are tokens.
  */
 import maplibregl from "maplibre-gl";
 import { useEffect } from "react";
@@ -17,8 +18,12 @@ const MAX_ZOOM = 15;
 
 export type DrawMode = "off" | "polygon" | "place";
 
+/** How a polygon is drawn: corner by corner, or a rectangle from two opposite corners. */
+export type PolygonTool = "corners" | "rectangle";
+
 export interface Draft {
   points: [number, number][];
+  tool?: PolygonTool;
   center?: { lat: number; lng: number };
   radiusM: number;
 }
@@ -72,7 +77,7 @@ export function GeofenceMap({
   useEffect(() => {
     if (!map) return;
     const onClick = (e: maplibregl.MapMouseEvent) => {
-      if (mode === "polygon") onDraft({ ...draft, points: [...draft.points, [e.lngLat.lng, e.lngLat.lat]] });
+      if (mode === "polygon") onDraft({ ...draft, points: nextPoints(draft, [e.lngLat.lng, e.lngLat.lat]) });
       else if (mode === "place") onDraft({ ...draft, center: { lat: e.lngLat.lat, lng: e.lngLat.lng } });
       else if (onSelect) {
         const hit = map.queryRenderedFeatures(e.point, { layers: [`${FENCES}-fill`] })[0];
@@ -85,6 +90,7 @@ export function GeofenceMap({
       map.off("click", onClick);
     };
   }, [map, mode, draft, onDraft, onSelect]);
+  useCornerDrag(map, mode === "polygon", draft, onDraft);
   return (
     <div
       ref={container}
@@ -93,6 +99,63 @@ export function GeofenceMap({
       aria-label="Map of geofences"
     />
   );
+}
+
+/** The draft after a click: one more corner, or with the rectangle tool the
+ *  first corner and then the whole rectangle (a third click starts again). */
+function nextPoints(d: Draft, p: [number, number]): [number, number][] {
+  if (d.tool !== "rectangle") return [...d.points, p];
+  if (d.points.length !== 1) return [p];
+  const [a] = d.points;
+  return [a, [p[0], a[1]], p, [a[0], p[1]]];
+}
+
+/** Drag a corner of the draft polygon to move it (the map does not pan meanwhile). */
+function useCornerDrag(
+  map: maplibregl.Map | undefined,
+  on: boolean,
+  draft: Draft,
+  onDraft: (d: Draft) => void,
+) {
+  useEffect(() => {
+    if (!map || !on) return;
+    const layer = `${DRAFT}-corner`;
+    let dragging: number | undefined;
+    const down = (e: maplibregl.MapLayerMouseEvent) => {
+      const idx = e.features?.[0]?.properties?.idx;
+      if (typeof idx !== "number") return;
+      e.preventDefault();
+      dragging = idx;
+      map.dragPan.disable();
+    };
+    const move = (e: maplibregl.MapMouseEvent) => {
+      if (dragging === undefined) return;
+      const points = draft.points.map((p, i) =>
+        i === dragging ? ([e.lngLat.lng, e.lngLat.lat] as [number, number]) : p,
+      );
+      onDraft({ ...draft, points });
+    };
+    const up = () => {
+      if (dragging === undefined) return;
+      dragging = undefined;
+      map.dragPan.enable();
+    };
+    const hover = () => (map.getCanvas().style.cursor = "move");
+    const leave = () => (map.getCanvas().style.cursor = "crosshair");
+    map.on("mousedown", layer, down);
+    map.on("mouseenter", layer, hover);
+    map.on("mouseleave", layer, leave);
+    map.on("mousemove", move);
+    map.on("mouseup", up);
+    return () => {
+      map.off("mousedown", layer, down);
+      map.off("mouseenter", layer, hover);
+      map.off("mouseleave", layer, leave);
+      map.off("mousemove", move);
+      map.off("mouseup", up);
+      map.dragPan.enable();
+    };
+  }, [map, on, draft, onDraft]);
 }
 
 /** The draft polygon (line, corners, closing fill) or the place's circle. */
@@ -107,12 +170,13 @@ function draftFeatures(d: Draft): GeoJSON.FeatureCollection {
         coordinates: d.points.length > 2 ? [...d.points, d.points[0]] : d.points,
       },
     });
-    for (const p of d.points)
+    d.points.forEach((p, idx) =>
       features.push({
         type: "Feature",
-        properties: { part: "corner" },
+        properties: { part: "corner", idx },
         geometry: { type: "Point", coordinates: p },
-      });
+      }),
+    );
   }
   if (d.center) {
     features.push({

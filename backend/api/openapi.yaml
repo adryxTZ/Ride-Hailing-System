@@ -2455,6 +2455,47 @@ paths:
         "403": { $ref: "#/components/responses/Error" }
         "404": { $ref: "#/components/responses/Error" }
         "409": { $ref: "#/components/responses/Error" }
+  /admin/pricing/charge-defaults:
+    get:
+      tags: [admin]
+      operationId: getChargeDefaults
+      summary: "Who receives each kind of extra charge by default in a country (built-in: tolls, parking, airport and entry fees go to the driver)"
+      parameters:
+        - { name: country, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, required: [data], properties: { data: { type: array, items: { $ref: "#/components/schemas/ChargeDefault" } } } }
+  /admin/pricing/charge-defaults/{category}:
+    put:
+      tags: [admin]
+      operationId: setChargeDefault
+      summary: "Change who receives a kind of charge by default (fees.edit, audited); new charges without a recipient take it"
+      parameters:
+        - { name: category, in: path, required: true, schema: { type: string, enum: [TOLL, PARKING, LEVY, AIRPORT_FEE, ENTRY_FEE, NIGHT, OTHER] } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [recipient, reason]
+              properties:
+                country: { type: string }
+                recipient: { type: string, enum: [FARE, PLATFORM, DRIVER, THIRD_PARTY] }
+                payee_id: { type: string, format: uuid }
+                reason: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, required: [data], properties: { data: { type: array, items: { $ref: "#/components/schemas/ChargeDefault" } } } }
+        "400": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /admin/pricing/as-of:
     get:
       tags: [admin]
@@ -5009,7 +5050,7 @@ components:
         amount: { $ref: "#/components/schemas/Money" }
         min_amount: { $ref: "#/components/schemas/Money" }
         max_amount: { $ref: "#/components/schemas/Money" }
-        recipient: { type: string, enum: [FARE, PLATFORM, DRIVER, THIRD_PARTY], description: "FARE: split like the fare; DRIVER: passed through; THIRD_PARTY: owed to the payee" }
+        recipient: { type: string, enum: [FARE, PLATFORM, DRIVER, THIRD_PARTY], description: "FARE: split like the fare; DRIVER: passed through; THIRD_PARTY: owed to the payee. Sent empty, the server uses the charge kind's default (GET /admin/pricing/charge-defaults)" }
         payee_id: { type: string, format: uuid }
         taxable: { type: boolean, description: "PLATFORM only: VAT is included in the amount" }
         applies_when: { type: string, enum: [PICKUP, DROPOFF, EITHER, BOTH, ROUTE_CROSSES] }
@@ -5133,6 +5174,15 @@ components:
         created_at: { type: string, format: date-time }
         finalized_at: { type: [string, "null"], format: date-time }
         seal_valid: { type: [boolean, "null"], description: "Whether the stored hash still matches the record" }
+    ChargeDefault:
+      type: object
+      required: [category, recipient, custom]
+      properties:
+        category: { type: string, enum: [TOLL, PARKING, LEVY, AIRPORT_FEE, ENTRY_FEE, NIGHT, OTHER] }
+        recipient: { type: string, enum: [FARE, PLATFORM, DRIVER, THIRD_PARTY] }
+        payee_id: { type: [string, "null"] }
+        payee_name: { type: [string, "null"] }
+        custom: { type: boolean, description: "false = the built-in default" }
     TripRefunds:
       type: object
       required: [paid, refunded, refundable, currency, refunds]

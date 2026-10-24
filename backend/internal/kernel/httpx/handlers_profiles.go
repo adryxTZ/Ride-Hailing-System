@@ -23,6 +23,7 @@ func mountProfiles(r chi.Router, d Deps) {
 		g.With(scopeGuard).Get("/admin/pricing/profiles", h.list)
 		g.Get("/admin/pricing/profiles/{id}", h.get)
 		g.With(scopeGuard).Get("/admin/pricing/payees", h.payees)
+		g.With(scopeGuard).Get("/admin/pricing/charge-defaults", h.chargeDefaults)
 		g.Get("/admin/trips/{id}/pricing-record", h.record)
 		w := g.With(requirePermission(identity.PermFeesEdit))
 		w.Post("/admin/pricing/profiles", h.create)
@@ -34,6 +35,7 @@ func mountProfiles(r chi.Router, d Deps) {
 		w.Post("/admin/pricing/profiles/{id}/make-default", h.makeDefault)
 		w.Post("/admin/pricing/payees", h.createPayee)
 		w.Patch("/admin/pricing/payees/{id}", h.updatePayee)
+		w.Put("/admin/pricing/charge-defaults/{category}", h.setChargeDefault)
 	})
 }
 
@@ -237,4 +239,34 @@ func respond(w http.ResponseWriter, req *http.Request, status int, v any, err er
 		return
 	}
 	writeJSON(w, status, v)
+}
+
+func (h profileHandlers) chargeDefaults(w http.ResponseWriter, req *http.Request) {
+	list, err := h.deps.Profiles.ChargeDefaults(req.Context(), scopeFrom(req, h.deps).Country)
+	respond(w, req, http.StatusOK, map[string]any{"data": list}, err)
+}
+
+type chargeDefaultBody struct {
+	Country   string `json:"country"`
+	Recipient string `json:"recipient"`
+	PayeeID   string `json:"payee_id"`
+	Reason    string `json:"reason"`
+}
+
+func (h profileHandlers) setChargeDefault(w http.ResponseWriter, req *http.Request) {
+	var body chargeDefaultBody
+	if !decode(w, req, &body) {
+		return
+	}
+	country := strings.ToUpper(body.Country)
+	if country == "" {
+		country = h.deps.Brand.Country
+	}
+	if !allowedScope(claimsFrom(req.Context()), country, "") {
+		writeError(w, req, ErrScopeForbidden, nil)
+		return
+	}
+	list, err := h.deps.Profiles.SetChargeDefault(req.Context(), claimsFrom(req.Context()).Subject, country,
+		strings.ToUpper(chi.URLParam(req, "category")), strings.ToUpper(body.Recipient), body.PayeeID, body.Reason)
+	respond(w, req, http.StatusOK, map[string]any{"data": list}, err)
 }
