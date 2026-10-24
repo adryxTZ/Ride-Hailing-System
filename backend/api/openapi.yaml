@@ -5452,7 +5452,7 @@ components:
         pickup: { $ref: "#/components/schemas/OfferStop" }
         rider_first_name: { type: string }
         pickup_distance_m: { type: integer, description: From the current trip's drop-off }
-        pickup_eta_s: { type: integer, description: Promised pickup time from now, finishing time included }
+        pickup_eta_s: { type: integer, description: "Promised pickup time from now, finishing time included" }
     DispatchSettings:
       type: object
       required: [country, trip_queue_enabled, finishing_statuses]

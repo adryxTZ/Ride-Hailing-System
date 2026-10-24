@@ -4825,7 +4825,7 @@ export interface components {
             rider_first_name?: string;
             /** @description From the current trip's drop-off */
             pickup_distance_m: number;
-            /** @description Promised pickup time from now */
+            /** @description Promised pickup time from now, finishing time included */
             pickup_eta_s?: number;
         };
         DispatchSettings: {

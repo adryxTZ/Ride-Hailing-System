@@ -48,11 +48,24 @@ log(`rider and driver signed in from install ${install.slice(0, 8)}`);
 const active = await call("GET", "/trips/active", rt);
 if (active.trip) await call("POST", `/trips/${active.trip.id}/cancel`, rt, { reason: "other" }).catch(() => {});
 await call("PUT", "/driver/status", dt, { online: false });
+// GPS flags are grouped per driver per day and a reviewed one stays closed: a
+// second run on the same day must open nothing new (checked instead).
+const todayLocal = new Date().toISOString().slice(0, 10);
+const reviewedToday = (await call("GET", `/admin/fraud/flags?rule=GPS_SPOOF&subject_id=${driverId}`, staff)).data
+  .find((f) => f.status !== "OPEN" && f.opened_at.slice(0, 10) === todayLocal);
 await call("PUT", "/driver/status", dt, { online: true, location: { lat: -6.777, lng: 39.23 }, mocked: true });
-const gps = await waitFor("the GPS flag", async () =>
-  (await call("GET", `/admin/fraud/flags?status=OPEN&rule=GPS_SPOOF&subject_id=${driverId}`, staff)).data[0]);
-log(`GPS flag: ${gps.severity}, mocked=${gps.evidence.mocked}, hits ${gps.hits}`);
-if (gps.severity !== "HIGH" || !gps.evidence.mocked) fail("a mocked location must raise a HIGH flag");
+let gps;
+if (reviewedToday) {
+  await sleep(4000);
+  const open = (await call("GET", `/admin/fraud/flags?status=OPEN&rule=GPS_SPOOF&subject_id=${driverId}`, staff)).data;
+  if (open.length) fail("a GPS flag reviewed today must not reopen until tomorrow");
+  log("GPS flag for today already reviewed: a repeat opens nothing new until tomorrow");
+} else {
+  gps = await waitFor("the GPS flag", async () =>
+    (await call("GET", `/admin/fraud/flags?status=OPEN&rule=GPS_SPOOF&subject_id=${driverId}`, staff)).data[0]);
+  log(`GPS flag: ${gps.severity}, mocked=${gps.evidence.mocked}, hits ${gps.hits}`);
+  if (gps.severity !== "HIGH" || !gps.evidence.mocked) fail("a mocked location must raise a HIGH flag");
+}
 
 // 3) self-booking ride
 const PICKUP = { lat: -6.7764, lng: 39.229 }, DROPOFF = { lat: -6.7724, lng: 39.2181 };
@@ -73,11 +86,12 @@ if (codes !== "PASSENGER_IS_DRIVER,SHARED_INSTALL" || self.severity !== "HIGH") 
 
 // 4) review
 const overview = await call("GET", "/admin/overview?country=TZ", staff);
-if (!(overview.fraud_open >= 2)) fail(`overview fraud_open is ${overview.fraud_open}`);
-const noNote = await call("POST", `/admin/fraud/flags/${gps.id}/review`, staff, { decision: "DISMISS", note: "" }, 400);
-const done = await call("POST", `/admin/fraud/flags/${gps.id}/review`, staff, { decision: "DISMISS", note: "e2e: test device" });
-const again = await call("POST", `/admin/fraud/flags/${gps.id}/review`, staff, { decision: "CONFIRM", note: "again" }, 409);
+if (!(overview.fraud_open >= (gps ? 2 : 1))) fail(`overview fraud_open is ${overview.fraud_open}`);
+const target = gps ?? self; // review rules checked on the GPS flag, or on the self-booking one on a re-run
+const noNote = await call("POST", `/admin/fraud/flags/${target.id}/review`, staff, { decision: "DISMISS", note: "" }, 400);
+const done = await call("POST", `/admin/fraud/flags/${target.id}/review`, staff, { decision: "DISMISS", note: "e2e: test device" });
+const again = await call("POST", `/admin/fraud/flags/${target.id}/review`, staff, { decision: "CONFIRM", note: "again" }, 409);
 log(`review: no note → ${noNote.error.code}; dismissed by ${done.reviewed_by}; again → ${again.error.code}`);
-await call("POST", `/admin/fraud/flags/${self.id}/review`, staff, { decision: "DISMISS", note: "e2e: test accounts" });
+if (gps) await call("POST", `/admin/fraud/flags/${self.id}/review`, staff, { decision: "DISMISS", note: "e2e: test accounts" });
 await call("PUT", "/driver/status", dt, { online: false });
 log("FRAUD E2E PASSED");

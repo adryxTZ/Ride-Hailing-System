@@ -71,8 +71,14 @@ if ((await call("GET", "/me", rider)).consent.required) fail("still required aft
 pass(`rider accepted v${after.version} (the old version is refused as stale)`);
 
 // 4) the public page
-const page = await fetch(after.url);
-const html = await page.text();
+// The page is cached in-process for a few seconds after a publish: retry briefly.
+let page, html;
+for (let i = 0; i < 10; i++) {
+  page = await fetch(after.url, { cache: "no-store" });
+  html = await page.text();
+  if (html.includes(marker)) break;
+  await sleep(1000);
+}
 if (page.status !== 200 || !page.headers.get("content-type")?.startsWith("text/html")) fail(`page ${page.status}`);
 for (const want of [marker, "dpo@e2e.example", "Plot 7, E2E Road", `Version ${published.version}`, "&lt;script&gt;"]) {
   if (!html.includes(want)) fail(`page lacks ${want}`);

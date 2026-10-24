@@ -25,7 +25,9 @@ func TestChargeDefaults(t *testing.T) {
 	if _, err := s.SetChargeDefault(ctx, "", "KE", "NIGHT", "PLATFORM", "", "test"); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _, _ = pool.Exec(ctx, `DELETE FROM charge_category_defaults WHERE country_code='KE' AND category='NIGHT'`) })
+	t.Cleanup(func() {
+		_, _ = pool.Exec(ctx, `DELETE FROM charge_category_defaults WHERE country_code='KE' AND category='NIGHT'`)
+	})
 	filled, err := s.withDefaultRecipients(ctx, "KE", []ChargeRule{{Category: "NIGHT"}, {Category: "TOLL"}, {Category: "PARKING", Recipient: "FARE"}})
 	if err != nil {
 		t.Fatal(err)
