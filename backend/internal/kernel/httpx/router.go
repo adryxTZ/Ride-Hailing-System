@@ -40,6 +40,7 @@ import (
 	"github.com/kalen-limited/hauler-rider/backend/internal/kernel/brand"
 	"github.com/kalen-limited/hauler-rider/backend/internal/kernel/i18n"
 	"github.com/kalen-limited/hauler-rider/backend/internal/kernel/theme"
+	"github.com/kalen-limited/hauler-rider/backend/internal/legal"
 	"github.com/kalen-limited/hauler-rider/backend/internal/pricing"
 	"github.com/kalen-limited/hauler-rider/backend/internal/profile"
 	"github.com/kalen-limited/hauler-rider/backend/internal/trips"
@@ -87,6 +88,7 @@ type Deps struct {
 	Fraud         *fraud.Service              // fraud flags and the review queue (nil = off)
 	Privacy       *privacy.Service            // consent, privacy requests, retention (nil = off)
 	Refunds       *refunds.Service            // staff refunds on completed trips (nil = off)
+	Legal         *legal.Service              // legal texts: public pages and the Legal page (nil = off)
 	PublicAPIURL  string                      // public API base for links (receipt PDFs); "" = the request's host
 	PublicWebURL  string                      // base of public links (share pages); empty = the request's own host
 	CancelReasons json.RawMessage             // seed/cancel_reasons.json, served verbatim
@@ -147,6 +149,7 @@ func New(d Deps) http.Handler {
 		mountPrivacy(v1, d)
 		mountTripMoney(v1, d)
 		mountGeofences(v1, d)
+		mountLegal(v1, d)
 	})
 
 	mountSharePage(r, d) // public live-trip page at /share/{token}

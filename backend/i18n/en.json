@@ -171,5 +171,7 @@
   "PAYMENT_IN_PROGRESS": "A payment is being taken for this trip. Try again in a minute.",
   "PRICE_BELOW_FIXED_PARTS": "The price can't be lower than the booking fee and the fixed charges.",
   "TRIP_NOT_REFUNDABLE": "Only a completed, paid trip can be refunded.",
-  "REFUND_TOO_LARGE": "That is more than what is left to refund on this trip."
+  "REFUND_TOO_LARGE": "That is more than what is left to refund on this trip.",
+  "LEGAL_DOCUMENT_NOT_FOUND": "That legal document doesn't exist or isn't published yet.",
+  "LEGAL_NO_DRAFT": "There is no draft to publish or discard. Save a draft first."
 }

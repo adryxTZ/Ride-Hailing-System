@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="{{.Lang}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>{{.Title}} · {{.Brand}}</title>
+<style>
+  :root { --primary: {{.Primary}}; --bg: {{.Background}}; --surface: {{.Surface}}; --text: {{.Text}}; --muted: {{.Muted}}; --line: {{.Border}}; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 28px 16px 56px; }
+  .brand { font-weight: 700; color: var(--primary); letter-spacing: .01em; }
+  h1 { font-size: 28px; line-height: 1.25; margin: 6px 0 4px; }
+  .meta { color: var(--muted); font-size: 14px; margin-bottom: 28px; }
+  h2 { font-size: 20px; margin: 32px 0 8px; }
+  h3 { font-size: 17px; margin: 24px 0 6px; }
+  h4 { font-size: 16px; margin: 20px 0 4px; }
+  p, li { margin: 0 0 12px; }
+  ul, ol { padding-left: 22px; margin: 0 0 12px; }
+  a { color: var(--primary); }
+  hr { border: 0; border-top: 1px solid var(--line); margin: 28px 0; }
+  blockquote { margin: 0 0 16px; padding: 12px 16px; border-left: 3px solid var(--primary); background: var(--surface); border-radius: 0 10px 10px 0; }
+  blockquote p { margin: 0; }
+  code { font: 14px ui-monospace, Menlo, monospace; background: var(--surface); padding: 1px 4px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<main>
+  <div class="brand">{{.Brand}}</div>
+  <h1>{{.Title}}</h1>
+  <div class="meta">{{.VersionLabel}} {{.Version}} · {{.EffectiveLabel}} {{.EffectiveDate}}</div>
+  <article>{{.Body}}</article>
+</main>
+</body>
+</html>

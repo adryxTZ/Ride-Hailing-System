@@ -171,5 +171,7 @@
   "PAYMENT_IN_PROGRESS": "Malipo ya safari hii yanachukuliwa. Jaribu tena baada ya dakika moja.",
   "PRICE_BELOW_FIXED_PARTS": "Bei haiwezi kuwa chini ya ada ya kuagiza na tozo zisizobadilika.",
   "TRIP_NOT_REFUNDABLE": "Safari iliyokamilika na kulipwa pekee ndiyo inaweza kurudishiwa pesa.",
-  "REFUND_TOO_LARGE": "Kiasi hicho ni zaidi ya kilichobaki kurudishwa kwenye safari hii."
+  "REFUND_TOO_LARGE": "Kiasi hicho ni zaidi ya kilichobaki kurudishwa kwenye safari hii.",
+  "LEGAL_DOCUMENT_NOT_FOUND": "Hati hiyo ya kisheria haipo au bado haijachapishwa.",
+  "LEGAL_NO_DRAFT": "Hakuna rasimu ya kuchapisha au kufuta. Hifadhi rasimu kwanza."
 }

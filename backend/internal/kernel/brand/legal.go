@@ -5,7 +5,9 @@ import (
 	"time"
 )
 
-// Legal holds the texts people accept (spec 2026-10-23-compliance-trust.md, S4).
+// Legal holds the consent notices people accept (spec 2026-10-23-compliance-trust.md, S4).
+// Since 2026-10-24-legal-documents.md the database is the source of truth: these
+// only seed an app that has no consent version yet (the fallback without legal texts).
 type Legal struct {
 	Consent []ConsentDoc `json:"consent"`
 }

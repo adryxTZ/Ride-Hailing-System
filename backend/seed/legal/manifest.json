@@ -1,0 +1,58 @@
+{
+  "consent": {
+    "RIDER": {
+      "title": { "en": "Your privacy", "sw": "Faragha yako" },
+      "summary": {
+        "en": "To use the app we process your phone number, name, trip locations and payment details as set out in our Privacy Notice and Terms of Use.",
+        "sw": "Ili kutumia programu tunachakata namba yako ya simu, jina, maeneo ya safari na taarifa za malipo kama ilivyoelezwa kwenye Taarifa ya Faragha na Masharti ya Matumizi."
+      }
+    },
+    "DRIVER": {
+      "title": { "en": "Your privacy", "sw": "Faragha yako" },
+      "summary": {
+        "en": "To drive with us we process your identity, licence and vehicle documents, your location while you are online, your trips and your earnings as set out in our Privacy Notice, Terms of Use and Driver Agreement.",
+        "sw": "Ili uendeshe nasi tunachakata utambulisho wako, leseni na nyaraka za gari, mahali ulipo ukiwa mtandaoni, safari zako na mapato yako kama ilivyoelezwa kwenye Taarifa ya Faragha, Masharti ya Matumizi na Mkataba wa Dereva."
+      }
+    }
+  },
+  "documents": [
+    {
+      "app": "RIDER",
+      "kind": "PRIVACY_NOTICE",
+      "title": { "en": "Privacy Notice for Riders", "sw": "Taarifa ya Faragha kwa Abiria" },
+      "summary": {
+        "en": "To use the app we process your phone number, name, trip locations and payment details as set out in our Privacy Notice and Terms of Use.",
+        "sw": "Ili kutumia programu tunachakata namba yako ya simu, jina, maeneo ya safari na taarifa za malipo kama ilivyoelezwa kwenye Taarifa ya Faragha na Masharti ya Matumizi."
+      },
+      "files": { "en": "rider/privacy_notice.en.md", "sw": "rider/privacy_notice.sw.md" }
+    },
+    {
+      "app": "RIDER",
+      "kind": "TERMS",
+      "title": { "en": "Terms of Use for Riders", "sw": "Masharti ya Matumizi kwa Abiria" },
+      "files": { "en": "rider/terms.en.md", "sw": "rider/terms.sw.md" }
+    },
+    {
+      "app": "DRIVER",
+      "kind": "PRIVACY_NOTICE",
+      "title": { "en": "Privacy Notice for Drivers", "sw": "Taarifa ya Faragha kwa Madereva" },
+      "summary": {
+        "en": "To drive with us we process your identity, licence and vehicle documents, your location while you are online, your trips and your earnings as set out in our Privacy Notice, Terms of Use and Driver Agreement.",
+        "sw": "Ili uendeshe nasi tunachakata utambulisho wako, leseni na nyaraka za gari, mahali ulipo ukiwa mtandaoni, safari zako na mapato yako kama ilivyoelezwa kwenye Taarifa ya Faragha, Masharti ya Matumizi na Mkataba wa Dereva."
+      },
+      "files": { "en": "driver/privacy_notice.en.md", "sw": "driver/privacy_notice.sw.md" }
+    },
+    {
+      "app": "DRIVER",
+      "kind": "TERMS",
+      "title": { "en": "Terms of Use for Drivers", "sw": "Masharti ya Matumizi kwa Madereva" },
+      "files": { "en": "driver/terms.en.md", "sw": "driver/terms.sw.md" }
+    },
+    {
+      "app": "DRIVER",
+      "kind": "DRIVER_AGREEMENT",
+      "title": { "en": "Driver Agreement", "sw": "Mkataba wa Dereva" },
+      "files": { "en": "driver/driver_agreement.en.md", "sw": "driver/driver_agreement.sw.md" }
+    }
+  ]
+}

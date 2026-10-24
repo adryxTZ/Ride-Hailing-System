@@ -1,0 +1,38 @@
+// Screenshots Settings › Legal: the overview, a document's editor with its preview, and a version diff.
+// Run: ADMIN=http://localhost:3021 node tools/shot-legal.mjs  (STAFF_EMAIL, STAFF_PASSWORD set)
+import { chromium } from "playwright";
+if (!process.env.STAFF_EMAIL || !process.env.STAFF_PASSWORD) throw new Error("Needs STAFF_EMAIL and STAFF_PASSWORD (a staff account on the local stack)");
+const out = process.env.OUT ?? "./tools/shots";
+const admin = process.env.ADMIN ?? "http://localhost:3000";
+const browser = await chromium.launch();
+const page = await (await browser.newContext({ viewport: { width: 1600, height: 1000 } })).newPage();
+page.on("pageerror", (e) => console.log("pageerror:", String(e).slice(0, 200)));
+await page.goto(`${admin}/login`, { waitUntil: "networkidle", timeout: 180000 });
+await page.getByLabel("Email").fill(process.env.STAFF_EMAIL);
+await page.getByLabel("Password").fill(process.env.STAFF_PASSWORD);
+await page.getByRole("button", { name: "Sign in" }).click();
+await page.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 30000 });
+await page.goto(`${admin}/settings/legal`, { waitUntil: "networkidle", timeout: 180000 });
+await page.waitForTimeout(2000);
+await page.screenshot({ path: `${out}/legal-overview.png`, fullPage: true });
+await page.goto(`${admin}/settings/legal/rider/privacy-notice`, { waitUntil: "networkidle", timeout: 180000 });
+await page.waitForTimeout(2500);
+await page.screenshot({ path: `${out}/legal-editor.png` });
+await page.getByRole("row", { name: /v2/ }).first().click();
+await page.waitForTimeout(800);
+await page.screenshot({ path: `${out}/legal-history.png`, fullPage: true });
+await page.getByRole("tab", { name: "Swahili" }).click();
+await page.locator("textarea").last().fill("## Mpya\n\nAndika kwa {{dpo_email}}.");
+await page.waitForTimeout(1500);
+await page.getByRole("button", { name: "Save draft" }).click();
+await page.waitForTimeout(1500);
+await page.getByRole("button", { name: "Publish" }).click();
+await page.waitForTimeout(800);
+await page.screenshot({ path: `${out}/legal-publish-dialog.png` });
+await page.keyboard.press("Escape");
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${admin}/settings/legal`, { waitUntil: "networkidle" });
+await page.waitForTimeout(1500);
+await page.screenshot({ path: `${out}/legal-overview-phone.png`, fullPage: true });
+await browser.close();
+console.log("done");

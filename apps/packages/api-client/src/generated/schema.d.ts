@@ -2047,6 +2047,126 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/legal/{app}/{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A live legal document: sanitised HTML (no script runs), or JSON with format=json (ETag, 5-minute public cache) */
+        get: operations["getLegalPage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/legal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The Legal page: every app's documents (live version, draft), the Legal details and the placeholders (legal.manage) */
+        get: operations["getLegalOverview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/legal/details": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Replace the placeholder values staff fill in (audited, reason required) */
+        put: operations["setLegalDetails"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/legal/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Render an unsaved text in one language as it would read if published today (placeholders filled) */
+        post: operations["previewLegalDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/legal/{app}/{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One document's versions, newest first, with their texts (for the editor and the diff) */
+        get: operations["getLegalVersions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/legal/{app}/{kind}/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Create the next version as a draft, or replace the open draft (audited) */
+        put: operations["saveLegalDraft"];
+        post?: never;
+        /** Discard the open draft (audited) */
+        delete: operations["deleteLegalDraft"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/legal/{app}/{kind}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Publish the draft (reason required, audited); the live version is archived. For a document people accept, the app's consent version moves on and everyone is asked to accept again */
+        post: operations["publishLegalDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/fraud/flags": {
         parameters: {
             query?: never;
@@ -4712,10 +4832,12 @@ export interface components {
             version: number;
             title: string;
             summary: string;
-            /** @description The full Privacy Notice and Terms */
+            /** @description The Privacy Notice's public page */
             url: string;
             /** Format: date-time */
             published_at: string;
+            /** @description Every document this version covers (Privacy Notice, Terms, Driver Agreement) */
+            links: components["schemas"]["ConsentLink"][];
         };
         ConsentStatus: {
             /** @enum {string} */
@@ -4723,6 +4845,148 @@ export interface components {
             current_version: number;
             accepted_version?: number | null;
             required: boolean;
+        };
+        ConsentLink: {
+            /** @enum {string} */
+            kind: "PRIVACY_NOTICE" | "TERMS" | "DRIVER_AGREEMENT";
+            title: string;
+            /** @description The document's public page (GET /legal/{app}/{kind}) */
+            url: string;
+        };
+        LegalDocument: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            app: "RIDER" | "DRIVER";
+            /** @enum {string} */
+            kind: "PRIVACY_NOTICE" | "TERMS" | "DRIVER_AGREEMENT";
+            version: number;
+            /** @enum {string} */
+            status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+            title: components["schemas"]["LocalizedText"];
+            summary: components["schemas"]["LocalizedText"];
+            body: components["schemas"]["LocalizedText"];
+            /**
+             * @description STARTER = the starter pack's template, to be reviewed by a lawyer
+             * @enum {string}
+             */
+            source: "STARTER" | "STAFF";
+            change_reason?: string | null;
+            created_by?: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            published_by?: string | null;
+            /** Format: date-time */
+            published_at?: string | null;
+        };
+        LegalVersionRef: {
+            /** Format: uuid */
+            id: string;
+            version: number;
+            /** @enum {string} */
+            source: "STARTER" | "STAFF";
+            /** Format: date-time */
+            updated_at: string;
+            /** Format: date-time */
+            published_at?: string | null;
+        };
+        LegalOverviewItem: {
+            /** @enum {string} */
+            app: "RIDER" | "DRIVER";
+            /** @enum {string} */
+            kind: "PRIVACY_NOTICE" | "TERMS" | "DRIVER_AGREEMENT";
+            slug: string;
+            /** @description People accept it: publishing asks them again */
+            consent: boolean;
+            title: string;
+            live: components["schemas"]["LegalVersionRef"] | null;
+            draft: components["schemas"]["LegalVersionRef"] | null;
+        };
+        LegalPlaceholder: {
+            /** @example dpo_email */
+            key: string;
+            label: string;
+            hint?: string;
+            /**
+             * @description DETAILS = filled on the Legal details form
+             * @enum {string}
+             */
+            source: "BRAND" | "COUNTRY" | "DETAILS" | "DOCUMENT";
+            /** @description Today's value (empty = missing) */
+            value: string;
+        };
+        LegalDetails: {
+            fields: {
+                [key: string]: string;
+            };
+            updated_by?: string | null;
+            /** Format: date-time */
+            updated_at?: string | null;
+        };
+        LegalDetailsInput: {
+            /** @description Only the DETAILS placeholders' keys */
+            fields: {
+                [key: string]: string;
+            };
+            reason: string;
+        };
+        LegalOverview: {
+            documents: components["schemas"]["LegalOverviewItem"][];
+            details: components["schemas"]["LegalDetails"];
+            placeholders: components["schemas"]["LegalPlaceholder"][];
+            locales: string[];
+            default_locale: string;
+        };
+        LegalVersions: {
+            /** @enum {string} */
+            app: "RIDER" | "DRIVER";
+            /** @enum {string} */
+            kind: "PRIVACY_NOTICE" | "TERMS" | "DRIVER_AGREEMENT";
+            slug: string;
+            consent: boolean;
+            /** @description The public page in the default language */
+            page_url: string;
+            versions: components["schemas"]["LegalDocument"][];
+        };
+        LegalDraftInput: {
+            title?: components["schemas"]["LocalizedText"];
+            summary?: components["schemas"]["LocalizedText"];
+            body?: components["schemas"]["LocalizedText"];
+        };
+        LegalPreviewInput: {
+            /** @enum {string} */
+            app: "RIDER" | "DRIVER";
+            /** @enum {string} */
+            kind: "PRIVACY_NOTICE" | "TERMS" | "DRIVER_AGREEMENT";
+            lang: string;
+            title?: components["schemas"]["LocalizedText"];
+            body: components["schemas"]["LocalizedText"];
+        };
+        LegalPreview: {
+            /** @description Sanitised HTML */
+            html: string;
+            /** @description Placeholders without a value */
+            missing: string[];
+            /** @description Placeholders not in the catalogue */
+            unknown: string[];
+        };
+        LegalPage: {
+            /** @enum {string} */
+            app: "RIDER" | "DRIVER";
+            /** @enum {string} */
+            kind: "PRIVACY_NOTICE" | "TERMS" | "DRIVER_AGREEMENT";
+            version: number;
+            lang: string;
+            title: string;
+            /** @description Sanitised HTML */
+            html: string;
+            /** @example 24 October 2026 */
+            effective_date: string;
+            /** Format: date-time */
+            published_at: string;
+            brand: string;
         };
         PrivacyRequest: {
             /** Format: uuid */
@@ -5229,6 +5493,8 @@ export interface components {
     parameters: {
         AcceptLanguage: string;
         AppVersion: string;
+        LegalApp: "rider" | "driver" | "RIDER" | "DRIVER";
+        LegalKind: "privacy-notice" | "terms" | "driver-agreement" | "PRIVACY_NOTICE" | "TERMS" | "DRIVER_AGREEMENT";
         /** @description A random UUID v4 the app creates once per install (fraud checks); ignored when malformed */
         InstallId: string;
     };
@@ -8832,6 +9098,259 @@ export interface operations {
                 };
             };
             403: components["responses"]["Error"];
+        };
+    };
+    getLegalPage: {
+        parameters: {
+            query?: {
+                /** @description Language; default from Accept-Language, then the brand's default */
+                lang?: string;
+                format?: "json";
+            };
+            header?: {
+                "Accept-Language"?: components["parameters"]["AcceptLanguage"];
+            };
+            path: {
+                app: components["parameters"]["LegalApp"];
+                kind: components["parameters"]["LegalKind"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
+                    "application/json": components["schemas"]["LegalPage"];
+                };
+            };
+            /** @description Not modified */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["Error"];
+        };
+    };
+    getLegalOverview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegalOverview"];
+                };
+            };
+            403: components["responses"]["Error"];
+        };
+    };
+    setLegalDetails: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LegalDetailsInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegalDetails"];
+                };
+            };
+            400: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+        };
+    };
+    previewLegalDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LegalPreviewInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegalPreview"];
+                };
+            };
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+        };
+    };
+    getLegalVersions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                app: components["parameters"]["LegalApp"];
+                kind: components["parameters"]["LegalKind"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegalVersions"];
+                };
+            };
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+        };
+    };
+    saveLegalDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                app: components["parameters"]["LegalApp"];
+                kind: components["parameters"]["LegalKind"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LegalDraftInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegalDocument"];
+                };
+            };
+            /** @description VALIDATION_FAILED; details.fields codes NOT_ALLOWED, LENGTH, UNKNOWN_PLACEHOLDER */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+        };
+    };
+    deleteLegalDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                app: components["parameters"]["LegalApp"];
+                kind: components["parameters"]["LegalKind"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Discarded */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            /** @description LEGAL_NO_DRAFT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    publishLegalDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                app: components["parameters"]["LegalApp"];
+                kind: components["parameters"]["LegalKind"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReasonInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegalDocument"];
+                };
+            };
+            /** @description REASON_REQUIRED, or VALIDATION_FAILED (title or body missing in a brand language) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            /** @description LEGAL_NO_DRAFT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     listFraudFlags: {
