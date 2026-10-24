@@ -2625,6 +2625,111 @@ paths:
               schema: { type: object, required: [ok, checked], properties: { ok: { type: boolean }, checked: { type: integer }, broken_at: { type: string } } }
         "400": { $ref: "#/components/responses/Error" }
         "403": { $ref: "#/components/responses/Error" }
+  /admin/finance/accounts:
+    get:
+      tags: [admin]
+      operationId: listFinanceAccounts
+      summary: "Every party paid from fares with its balance, the period's movements and fare share (finance.view)"
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: country, in: query, schema: { type: string }, description: "Country whose currency is reported (default the brand's home country)" }
+        - { name: from, in: query, schema: { type: string, format: date }, description: "First day of the period in the country's timezone (default the 1st of this month)" }
+        - { name: to, in: query, schema: { type: string, format: date }, description: "Last day of the period, inclusive (default today)" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FinanceAccounts" }
+        "400": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+  /admin/finance/accounts/{key}/entries:
+    get:
+      tags: [admin]
+      operationId: listFinanceAccountEntries
+      summary: "One page of an account's ledger entries in the period, newest first, with the running balance (finance.view)"
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: key, in: path, required: true, schema: { type: string }, description: "Account key: a kind (VAT_PAYABLE) or CHARGES_PAYABLE:<payee id>" }
+        - { name: country, in: query, schema: { type: string } }
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FinanceAccountEntries" }
+        "400": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { description: "ACCOUNT_NOT_FOUND", content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+  /admin/finance/accounts/{key}/export:
+    get:
+      tags: [admin]
+      operationId: exportFinanceAccountEntries
+      summary: "The period's entries of an account as CSV, oldest first; text cells that start with = + - @ are escaped (finance.view)"
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: key, in: path, required: true, schema: { type: string } }
+        - { name: country, in: query, schema: { type: string } }
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+      responses:
+        "200":
+          description: "CSV: date, trip, kind, description, holder, reference, amount, running_balance, currency"
+          content:
+            text/csv:
+              schema: { type: string }
+        "400": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { description: "ACCOUNT_NOT_FOUND", content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+  /admin/finance/accounts/{key}/payments:
+    post:
+      tags: [admin]
+      operationId: recordFinancePayment
+      summary: "Record a payment against what the platform owes (VAT, levy, a charge payee, rider refunds); posted from the platform bank (finance.settle, audited)"
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: key, in: path, required: true, schema: { type: string }, description: "VAT_PAYABLE, LEVY_PAYABLE, CHARGES_PAYABLE:<payee id> or RIDER_REFUNDS" }
+        - { name: country, in: query, schema: { type: string } }
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, maxLength: 200 }, description: "A repeated key returns the first payment (200) without posting again" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FinancePaymentInput" }
+      responses:
+        "200":
+          description: "Replayed: the payment this key already recorded"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FinancePayment" }
+        "201":
+          description: Recorded
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FinancePayment" }
+        "400": { description: "VALIDATION_FAILED (details.field) or IDEMPOTENCY_KEY_REQUIRED", content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { description: "ACCOUNT_NOT_FOUND", content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "409": { description: "PAYMENT_MORE_THAN_OWED (details.owed), PAYMENT_AMOUNT_MISMATCH (details.expected or below/above), REFUND_NOT_OWED, ACCOUNT_NOT_SETTLEABLE or IDEMPOTENCY_KEY_REUSED", content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+  /admin/finance/rider-refunds/owed:
+    get:
+      tags: [admin]
+      operationId: listOwedRiderRefunds
+      summary: "Unpaid rider refunds (oldest first) and riders by what they are owed, for recording a refund payment (finance.view)"
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: country, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OwedRiderRefunds" }
+        "403": { $ref: "#/components/responses/Error" }
   /admin/countries:
     get:
       tags: [admin]
@@ -5133,6 +5238,121 @@ components:
         created_at: { type: string, format: date-time }
         finalized_at: { type: [string, "null"], format: date-time }
         seal_valid: { type: [boolean, "null"], description: "Whether the stored hash still matches the record" }
+    FinanceAccount:
+      type: object
+      description: "One party's account. balance points the way position says: WE_OWE what we owe, OWED_TO_US what is owed to us, EARNED revenue, HELD at the gateway, BANK the platform bank (negative = net paid out)"
+      required: [key, kind, currency, position, balance, holders, added, reduced, entries, settleable]
+      properties:
+        key: { type: string }
+        kind: { type: string }
+        payee_id: { type: string, format: uuid }
+        name: { type: string }
+        payee_kind: { type: string }
+        currency: { type: string }
+        position: { type: string, enum: [EARNED, WE_OWE, OWED_TO_US, HELD, BANK] }
+        balance: { $ref: "#/components/schemas/Money" }
+        owed_to_us: { $ref: "#/components/schemas/Money" }
+        we_owe: { $ref: "#/components/schemas/Money" }
+        holders: { type: integer, description: "Ledger accounts behind the line (drivers, riders)" }
+        added: { $ref: "#/components/schemas/Money" }
+        reduced: { $ref: "#/components/schemas/Money" }
+        fare_base: { $ref: "#/components/schemas/Money" }
+        on_fares: { $ref: "#/components/schemas/Money" }
+        rate: { type: string, description: "on_fares / fare_base, e.g. 0.0180" }
+        entries: { type: integer }
+        last_at: { type: string, format: date-time }
+        settleable: { type: boolean }
+    FinanceAccounts:
+      type: object
+      required: [currency, from, to, fares, trips, accounts]
+      properties:
+        currency: { type: string }
+        from: { type: string, format: date-time }
+        to: { type: string, format: date-time, description: Exclusive }
+        fares: { $ref: "#/components/schemas/Money" }
+        trips: { type: integer }
+        accounts: { type: array, items: { $ref: "#/components/schemas/FinanceAccount" } }
+    FinanceAccountEntry:
+      type: object
+      required: [seq, at, kind, reference, memo, amount, running]
+      properties:
+        seq: { type: integer, format: int64 }
+        at: { type: string, format: date-time }
+        kind: { type: string }
+        reference: { type: string }
+        memo: { type: string }
+        amount: { $ref: "#/components/schemas/Money" }
+        running: { $ref: "#/components/schemas/Money" }
+        trip_id: { type: string, format: uuid }
+        trip_code: { type: string }
+        holder_id: { type: string, format: uuid }
+        holder: { type: string }
+    FinanceAccountEntries:
+      type: object
+      required: [key, entries, total, offset, limit]
+      properties:
+        key: { type: string }
+        entries: { type: array, items: { $ref: "#/components/schemas/FinanceAccountEntry" } }
+        total: { type: integer }
+        offset: { type: integer }
+        limit: { type: integer }
+    FinancePaymentInput:
+      type: object
+      required: [amount, paid_on, method, reference, reason]
+      properties:
+        amount: { $ref: "#/components/schemas/Money" }
+        paid_on: { type: string, format: date }
+        method: { type: string, enum: [BANK_TRANSFER, MOBILE_MONEY, CASH, CHEQUE, OTHER] }
+        reference: { type: string, maxLength: 120 }
+        reason: { type: string, maxLength: 1000 }
+        refund_ids: { type: array, items: { type: string, format: uuid }, description: "RIDER_REFUNDS: pay these refunds; the amount must be their sum" }
+        rider_id: { type: string, format: uuid, description: "RIDER_REFUNDS: pay down one rider's balance" }
+    FinancePayment:
+      type: object
+      required: [id, key, kind, currency, amount, paid_on, method, reference, reason, refund_ids, created_at, replayed]
+      properties:
+        id: { type: string, format: uuid }
+        key: { type: string }
+        kind: { type: string }
+        payee_id: { type: string, format: uuid }
+        rider_id: { type: string, format: uuid }
+        currency: { type: string }
+        amount: { $ref: "#/components/schemas/Money" }
+        paid_on: { type: string, format: date }
+        method: { type: string }
+        reference: { type: string }
+        reason: { type: string }
+        refund_ids: { type: array, items: { type: string, format: uuid } }
+        created_at: { type: string, format: date-time }
+        replayed: { type: boolean }
+    OwedRiderRefunds:
+      type: object
+      required: [currency, refunds, riders]
+      properties:
+        currency: { type: string }
+        refunds:
+          type: array
+          items:
+            type: object
+            required: [id, trip_id, trip_code, rider_id, rider, amount, reason, created_at]
+            properties:
+              id: { type: string, format: uuid }
+              trip_id: { type: string, format: uuid }
+              trip_code: { type: string }
+              rider_id: { type: string, format: uuid }
+              rider: { type: string }
+              amount: { $ref: "#/components/schemas/Money" }
+              reason: { type: string }
+              created_at: { type: string, format: date-time }
+        riders:
+          type: array
+          items:
+            type: object
+            required: [rider_id, rider, owed]
+            properties:
+              rider_id: { type: string, format: uuid }
+              rider: { type: string }
+              owed: { $ref: "#/components/schemas/Money" }
     TripRefunds:
       type: object
       required: [paid, refunded, refundable, currency, refunds]

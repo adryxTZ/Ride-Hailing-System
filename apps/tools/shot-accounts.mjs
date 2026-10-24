@@ -1,0 +1,33 @@
+// Screenshots Finance › Accounts, the VAT account page and the payment dialog.
+// Run: ADMIN=http://localhost:3023 OUT=./tools/shots node tools/shot-accounts.mjs
+import { chromium } from "playwright";
+if (!process.env.STAFF_EMAIL || !process.env.STAFF_PASSWORD) throw new Error("Needs STAFF_EMAIL and STAFF_PASSWORD (a staff account on the local stack)");
+const out = process.env.OUT ?? "./tools/shots";
+const admin = process.env.ADMIN ?? "http://localhost:3000";
+const year = `from=${new Date().getFullYear()}-01-01&to=${new Date().toISOString().slice(0, 10)}`;
+const browser = await chromium.launch();
+const page = await (await browser.newContext({ viewport: { width: 1600, height: 1000 } })).newPage();
+page.on("pageerror", (e) => console.log("pageerror:", String(e).slice(0, 200)));
+await page.goto(`${admin}/login`, { waitUntil: "networkidle", timeout: 180000 });
+await page.getByLabel("Email").fill(process.env.STAFF_EMAIL);
+await page.getByLabel("Password").fill(process.env.STAFF_PASSWORD);
+await page.getByRole("button", { name: "Sign in" }).click();
+await page.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 30000 });
+await page.goto(`${admin}/finance/accounts?${year}`, { waitUntil: "networkidle", timeout: 180000 });
+await page.waitForTimeout(2000);
+await page.screenshot({ path: `${out}/accounts-list.png`, fullPage: true });
+await page.goto(`${admin}/finance/accounts/VAT_PAYABLE?${year}`, { waitUntil: "networkidle", timeout: 180000 });
+await page.waitForTimeout(2000);
+await page.screenshot({ path: `${out}/accounts-vat.png`, fullPage: true });
+await page.getByRole("button", { name: "Record payment" }).first().click();
+await page.waitForTimeout(800);
+await page.screenshot({ path: `${out}/accounts-pay.png` });
+await page.goto(`${admin}/finance/accounts/RIDER_REFUNDS?${year}`, { waitUntil: "networkidle", timeout: 180000 });
+await page.waitForTimeout(1500);
+await page.getByRole("button", { name: "Record payment" }).first().click();
+await page.waitForTimeout(500);
+await page.getByLabel("What are you paying?").selectOption("chosen");
+await page.waitForTimeout(800);
+await page.screenshot({ path: `${out}/accounts-refunds-pay.png` });
+await browser.close();
+console.log("done");

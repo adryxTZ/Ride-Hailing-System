@@ -1,5 +1,6 @@
 /** The dashboard's sections, grouped for the side navigation. */
 import {
+  BookOpen,
   Car,
   Cpu,
   FileCheck,
@@ -73,7 +74,10 @@ export const NAV_GROUPS: NavGroup[] = [
     title: "Money",
     collapsible: true,
     icon: Receipt,
-    items: [{ href: "/finance", label: "Finance", icon: Receipt }],
+    items: [
+      { href: "/finance", label: "Finance", icon: Receipt },
+      { href: "/finance/accounts", label: "Accounts", icon: BookOpen },
+    ],
   },
   {
     title: "Trust",
@@ -112,6 +116,11 @@ export function isActive(pathname: string, href: string): boolean {
     return (
       pathname === "/pricing" ||
       (pathname.startsWith("/pricing/") && !/^\/pricing\/(fees|engines|geofences)/.test(pathname))
+    );
+  if (href === "/finance")
+    return (
+      pathname === "/finance" ||
+      (pathname.startsWith("/finance/") && !pathname.startsWith("/finance/accounts"))
     );
   if (href === "/staff")
     return pathname === "/staff" || (pathname.startsWith("/staff/") && !pathname.startsWith("/staff/roles"));

@@ -171,5 +171,10 @@
   "PAYMENT_IN_PROGRESS": "Malipo ya safari hii yanachukuliwa. Jaribu tena baada ya dakika moja.",
   "PRICE_BELOW_FIXED_PARTS": "Bei haiwezi kuwa chini ya ada ya kuagiza na tozo zisizobadilika.",
   "TRIP_NOT_REFUNDABLE": "Safari iliyokamilika na kulipwa pekee ndiyo inaweza kurudishiwa pesa.",
-  "REFUND_TOO_LARGE": "Kiasi hicho ni zaidi ya kilichobaki kurudishwa kwenye safari hii."
+  "REFUND_TOO_LARGE": "Kiasi hicho ni zaidi ya kilichobaki kurudishwa kwenye safari hii.",
+  "ACCOUNT_NOT_FOUND": "Akaunti hiyo ya fedha haijapatikana.",
+  "ACCOUNT_NOT_SETTLEABLE": "Malipo yanaweza kurekodiwa tu kwenye akaunti ambazo jukwaa linadaiwa.",
+  "PAYMENT_MORE_THAN_OWED": "Kiasi hicho ni zaidi ya kile jukwaa linadaiwa kwenye akaunti hii.",
+  "PAYMENT_AMOUNT_MISMATCH": "Kiasi lazima kilingane na marejesho yanayolipwa kikamilifu.",
+  "REFUND_NOT_OWED": "Mojawapo ya marejesho hayo tayari limelipwa au halijapatikana."
 }

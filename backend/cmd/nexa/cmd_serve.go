@@ -25,6 +25,7 @@ import (
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 
+	"github.com/kalen-limited/hauler-rider/backend/internal/accounts"
 	"github.com/kalen-limited/hauler-rider/backend/internal/branding"
 	"github.com/kalen-limited/hauler-rider/backend/internal/catalog"
 	"github.com/kalen-limited/hauler-rider/backend/internal/identity"
@@ -194,6 +195,7 @@ func runServe(args []string) error {
 		Fraud:         fraudSvc,
 		Privacy:       privacySvc,
 		Refunds:       newRefunds(bs, brandID, ledger, tripSvc),
+		Accounts:      accounts.New(bs.pool, brandID, ledger),
 		Trips:         tripSvc,
 		Presence:      presenceSvc,
 		Hub:           hub,

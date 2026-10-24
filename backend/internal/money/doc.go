@@ -11,4 +11,5 @@
 //	payout.go      what a driver may cash out (DriverOwed) and paid payouts (PostPayoutPaidTx)
 //	cancellation.go  cancellation fees and the rider dues they create
 //	admin.go       finance summary, driver balances, journal (staff views)
+//	settlement.go  payments staff record against payables, from PLATFORM_BANK (PostSettlementTx)
 package money

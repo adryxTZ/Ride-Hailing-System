@@ -13,6 +13,7 @@ const (
 	PermAreasEdit        = "areas.edit"
 	PermFeesEdit         = "fees.edit"
 	PermFinanceView      = "finance.view"
+	PermFinanceSettle    = "finance.settle"
 	PermHoldsManage      = "holds.manage"
 	PermPayoutsApprove   = "payouts.approve"
 	PermComplianceManage = "compliance.manage"
@@ -45,6 +46,7 @@ var Permissions = []Permission{
 	{PermAreasEdit, "Pricing", "Create regions and mark them on the map"},
 	{PermFeesEdit, "Pricing", "Publish fees and tax rules"},
 	{PermFinanceView, "Money", "See finance: ledger, balances, pay-ins"},
+	{PermFinanceSettle, "Money", "Record payments to the tax authority, regulator, charge payees and riders"},
 	{PermHoldsManage, "Money", "Place and release driver holds"},
 	{PermPayoutsApprove, "Money", "Approve or reject driver cash-outs"},
 	{PermComplianceManage, "Trust", "Regulator submissions and switches, driver documents"},
