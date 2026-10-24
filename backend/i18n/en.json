@@ -171,5 +171,16 @@
   "PAYMENT_IN_PROGRESS": "A payment is being taken for this trip. Try again in a minute.",
   "PRICE_BELOW_FIXED_PARTS": "The price can't be lower than the booking fee and the fixed charges.",
   "TRIP_NOT_REFUNDABLE": "Only a completed, paid trip can be refunded.",
-  "REFUND_TOO_LARGE": "That is more than what is left to refund on this trip."
+  "REFUND_TOO_LARGE": "That is more than what is left to refund on this trip.",
+  "APPROVAL_NOT_FOUND": "That approval request doesn't exist.",
+  "APPROVAL_UNKNOWN_ACTION": "That action cannot have an approval workflow.",
+  "APPROVAL_NOT_PENDING": "This request is no longer waiting for approval.",
+  "APPROVAL_EXPIRED": "This request expired before it was approved.",
+  "APPROVAL_SELF": "You cannot approve or reject your own request.",
+  "APPROVAL_NOT_APPROVER": "Your roles cannot approve this step.",
+  "APPROVAL_ALREADY_DECIDED": "You already decided on this request.",
+  "APPROVAL_NOT_REQUESTER": "Only the person who asked can withdraw this request.",
+  "APPROVAL_NOTE_REQUIRED": "Add a note (up to 1000 characters).",
+  "APPROVAL_WORKFLOW_INVALID": "The workflow has problems; fix them and save again.",
+  "APPROVAL_ACTION_UNAVAILABLE": "This action is no longer available."
 }

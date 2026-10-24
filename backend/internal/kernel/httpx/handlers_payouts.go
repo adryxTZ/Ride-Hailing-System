@@ -6,6 +6,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/shopspring/decimal"
 
+	"github.com/kalen-limited/hauler-rider/backend/internal/approvals"
+	"github.com/kalen-limited/hauler-rider/backend/internal/approvals/actions"
 	"github.com/kalen-limited/hauler-rider/backend/internal/identity"
 	"github.com/kalen-limited/hauler-rider/backend/internal/payouts"
 )
@@ -106,6 +108,9 @@ func (h payoutHandlers) decide(approve bool) http.HandlerFunc {
 			writeError(w, req, ErrScopeForbidden, nil)
 			return
 		}
+		if approve && h.sentForApproval(w, req, id, body.Reason) {
+			return
+		}
 		var p *payouts.Payout
 		var err error
 		if approve {
@@ -119,6 +124,28 @@ func (h payoutHandlers) decide(approve bool) http.HandlerFunc {
 		}
 		writeJSON(w, http.StatusOK, p)
 	}
+}
+
+// sentForApproval offers a payout approval to its workflow (amount condition).
+// The request belongs to the first country of the payout's currency that the
+// caller may work in. An unknown payout is left to the service (404).
+func (h payoutHandlers) sentForApproval(w http.ResponseWriter, req *http.Request, id, reason string) bool {
+	if h.deps.Approvals == nil || !h.deps.Payouts.Enabled() || !h.deps.Approvals.Enabled(req.Context(), actions.PayoutApprove) {
+		return false // without a gateway the service answers PAYOUTS_UNAVAILABLE as before
+	}
+	p, err := h.deps.Payouts.AdminGet(req.Context(), id)
+	if err != nil {
+		return false
+	}
+	country, c := "", claimsFrom(req.Context())
+	for _, bc := range h.deps.Brand.Countries {
+		if bc.Currency == p.Currency && allowedScope(c, bc.Code, "") {
+			country = bc.Code
+			break
+		}
+	}
+	return sentForApproval(w, req, h.deps, approvals.Submission{Action: actions.PayoutApprove, Reason: reason, Country: country,
+		Amount: &p.Amount, Target: "payout:" + p.ID, Payload: actions.PayoutPayload{PayoutID: p.ID}})
 }
 
 // mayDecide reports whether the caller's country scope covers the payout: it is

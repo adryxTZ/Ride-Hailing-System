@@ -2,6 +2,8 @@ package httpx
 
 import (
 	"context"
+	"github.com/kalen-limited/hauler-rider/backend/internal/approvals"
+	"github.com/kalen-limited/hauler-rider/backend/internal/approvals/actions"
 	"github.com/kalen-limited/hauler-rider/backend/internal/identity"
 	"github.com/kalen-limited/hauler-rider/backend/internal/kernel/scope"
 	"net/http"
@@ -425,9 +427,13 @@ func (h adminOpsHandlers) setStaff(w http.ResponseWriter, req *http.Request) {
 		Roles    []string `json:"roles"`
 		Email    string   `json:"email"`
 		Password string   `json:"password"`
+		Reason   string   `json:"reason"`
 	}
 	if !decode(w, req, &body) {
 		return
+	}
+	if h.staffRolesGated(w, req, body.Phone, body.Name, body.Roles, body.Reason) {
+		return // a held role change stores no email or password: set them after approval
 	}
 	u, err := h.deps.Identity.SetStaffRoles(req.Context(), claimsFrom(req.Context()).Subject, body.Phone, body.Name, body.Roles)
 	if err != nil {
@@ -441,6 +447,24 @@ func (h adminOpsHandlers) setStaff(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 	h.staff(w, req)
+}
+
+// staffRolesGated offers a role change to its workflow; an edit that keeps the
+// person's roles (e.g. only a new password) is not a role change and applies at once.
+func (h adminOpsHandlers) staffRolesGated(w http.ResponseWriter, req *http.Request, phone, name string, roles []string, reason string) bool {
+	if h.deps.Approvals == nil || !h.deps.Approvals.Enabled(req.Context(), actions.StaffRoles) {
+		return false
+	}
+	cur, err := h.deps.Identity.StaffRolesByPhone(req.Context(), phone)
+	if err != nil {
+		writeDomainError(w, req, err)
+		return true
+	}
+	if actions.SameRoles(cur.Roles, roles) {
+		return false
+	}
+	return sentForApproval(w, req, h.deps, approvals.Submission{Action: actions.StaffRoles, Reason: reason, Target: "user:" + cur.UserID,
+		Payload: actions.StaffRolesPayload{Phone: phone, FullName: name, Roles: roles}})
 }
 
 // deleteTariff removes an area's own prices so it inherits the country's again.

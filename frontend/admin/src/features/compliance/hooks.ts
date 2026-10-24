@@ -2,6 +2,7 @@
 /** Compliance hooks — each regulated country's switches and figures, the submissions outbox, and the audited actions. */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, type Schemas, unwrap } from "@/lib/api";
+import { unwrapGated } from "@/lib/approval";
 import { useScope } from "@/lib/scope";
 
 const KEY = ["admin", "compliance"];
@@ -52,7 +53,7 @@ function useComplianceWrite<T>(fn: (v: T) => Promise<unknown>) {
 export const useRegulatorSettings = () =>
   useComplianceWrite(
     async (v: { country: string; enabled?: boolean; fail_closed?: boolean; reason: string }) =>
-      unwrap(
+      unwrapGated(
         await api.PATCH("/admin/compliance/regulator/{country}", {
           params: { path: { country: v.country } },
           body: { enabled: v.enabled, fail_closed: v.fail_closed, reason: v.reason },

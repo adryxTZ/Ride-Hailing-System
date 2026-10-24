@@ -76,3 +76,11 @@ func (c *Versioned[T]) Get(ctx context.Context) (T, int64, error) {
 	c.value, c.version, c.loaded, c.checkedAt = value, current, true, time.Now()
 	return c.value, c.version, nil
 }
+
+// Stale makes the next Get check the version again, so a write in this
+// process is seen at once instead of after checkTTL.
+func (c *Versioned[T]) Stale() {
+	c.mu.Lock()
+	c.checkedAt = time.Time{}
+	c.mu.Unlock()
+}

@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { api, type Schemas, unwrap } from "@/lib/api";
+import { unwrapGated } from "@/lib/approval";
 import { apiUrl } from "@/lib/config";
 
 const KEY = ["admin", "branding"];
@@ -78,7 +79,7 @@ export function usePublish() {
   const done = useRefresh();
   return useMutation({
     mutationFn: async (a: { id: string; reason: string }) =>
-      unwrap(
+      unwrapGated(
         await api.POST("/admin/branding/themes/{id}/publish", {
           params: { path: { id: a.id } },
           body: { reason: a.reason },

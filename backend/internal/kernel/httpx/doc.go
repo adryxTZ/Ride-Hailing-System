@@ -7,6 +7,8 @@
 //   - respond.go     JSON and error-envelope writers shared by all handlers
 //   - middleware.go  cross-cutting middleware (request logging, …)
 //   - ready.go       readiness probes for the dependencies the process needs
+//   - approval_gate.go  sentForApproval: the 202 gate gated handlers call
+//     before applying a change that may need approval
 //
 // Domain packages never import httpx; httpx depends on them through the small
 // interfaces declared in Deps.

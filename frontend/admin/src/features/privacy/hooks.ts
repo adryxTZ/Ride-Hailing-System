@@ -6,6 +6,7 @@
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, type Schemas, unwrap } from "@/lib/api";
+import { unwrapGated } from "@/lib/approval";
 
 export type PrivacyRequest = Schemas["PrivacyRequest"];
 export type RequestKind = PrivacyRequest["kind"];
@@ -48,7 +49,7 @@ export function useDecide(id: string) {
     mutationFn: async ({ decision, reason }: { decision: "approve" | "reject"; reason: string }) => {
       const opts = { params: { path: { id } }, body: { reason } };
       return decision === "approve"
-        ? unwrap(await api.POST("/admin/privacy/requests/{id}/approve", opts))
+        ? unwrapGated(await api.POST("/admin/privacy/requests/{id}/approve", opts))
         : unwrap(await api.POST("/admin/privacy/requests/{id}/reject", opts));
     },
     // Settled, not success: a DELETE_BLOCKED answer refreshes the blockers shown.

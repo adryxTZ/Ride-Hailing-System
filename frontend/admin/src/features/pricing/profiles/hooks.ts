@@ -2,6 +2,7 @@
 /** Profile hooks — the list, one profile, payees, and every staff change (each refreshes pricing data). */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, type Schemas, unwrap } from "@/lib/api";
+import { unwrapGated } from "@/lib/approval";
 
 const KEY = ["admin", "profiles"];
 
@@ -88,7 +89,7 @@ export const usePublishVersion = () =>
       effective_from?: string;
       reason: string;
     }) =>
-      unwrap(
+      unwrapGated(
         await api.POST("/admin/pricing/profiles/{id}/versions", {
           ...path(a.id),
           body: { terms: a.terms, charges: a.charges, effective_from: a.effective_from, reason: a.reason },
@@ -98,7 +99,7 @@ export const usePublishVersion = () =>
 
 export const useSetStatus = () =>
   useWrite(async (a: { id: string; status: "ACTIVE" | "INACTIVE"; reason: string }) =>
-    unwrap(
+    unwrapGated(
       await api.POST("/admin/pricing/profiles/{id}/status", {
         ...path(a.id),
         body: { status: a.status, reason: a.reason },
@@ -109,7 +110,7 @@ export const useSetStatus = () =>
 export const useAssign = () =>
   useWrite(
     async (a: { id: string; scope_kind: ScopeKind; scope_id: string; priority: number; reason: string }) =>
-      unwrap(
+      unwrapGated(
         await api.POST("/admin/pricing/profiles/{id}/assignments", {
           ...path(a.id),
           body: { scope_kind: a.scope_kind, scope_id: a.scope_id, priority: a.priority, reason: a.reason },
@@ -128,7 +129,7 @@ export const useUnassign = () =>
 
 export const useMakeDefault = () =>
   useWrite(async (a: { id: string; reason: string }) =>
-    unwrap(
+    unwrapGated(
       await api.POST("/admin/pricing/profiles/{id}/make-default", {
         ...path(a.id),
         body: { reason: a.reason },

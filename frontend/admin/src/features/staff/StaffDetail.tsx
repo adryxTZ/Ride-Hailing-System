@@ -43,6 +43,7 @@ import {
   useSetStaff,
   useStaffMember,
 } from "./hooks";
+import { RolePicker } from "./RolePicker";
 
 const TABS = [
   { value: "sessions", label: "Sessions" },
@@ -169,25 +170,11 @@ export function StaffDetail({ id }: { id: string }) {
             >
               {roleDraft ? (
                 <div className="grid gap-3">
-                  <div className="flex flex-wrap gap-2" role="group" aria-label="Roles">
-                    {(roles?.data ?? []).map((r) => (
-                      <button
-                        key={r.id}
-                        type="button"
-                        aria-pressed={roleDraft.includes(r.name)}
-                        onClick={() =>
-                          setRoleDraft(
-                            roleDraft.includes(r.name)
-                              ? roleDraft.filter((x) => x !== r.name)
-                              : [...roleDraft, r.name],
-                          )
-                        }
-                        className={`rounded-[8px] px-3 py-1.5 text-sm font-medium transition-colors ${roleDraft.includes(r.name) ? "bg-nav text-nav-ink" : "bg-surface-2 text-muted hover:text-ink"}`}
-                      >
-                        {r.name}
-                      </button>
-                    ))}
-                  </div>
+                  <RolePicker
+                    roles={(roles?.data ?? []).map((r) => r.name)}
+                    value={roleDraft}
+                    onChange={setRoleDraft}
+                  />
                   <div className="flex justify-end gap-2">
                     <Button variant="ghost" onClick={() => setRoleDraft(undefined)}>
                       Cancel
@@ -290,11 +277,11 @@ export function StaffDetail({ id }: { id: string }) {
         confirm="Save"
         busy={setStaff.isPending}
         onClose={() => setAsk(undefined)}
-        onConfirm={() =>
+        onConfirm={(reason) =>
           p &&
           roleDraft &&
           setStaff.mutate(
-            { phone: p.phone, full_name: p.full_name ?? "", roles: roleDraft },
+            { phone: p.phone, full_name: p.full_name ?? "", roles: roleDraft, reason },
             {
               onSuccess: () => {
                 setAsk(undefined);

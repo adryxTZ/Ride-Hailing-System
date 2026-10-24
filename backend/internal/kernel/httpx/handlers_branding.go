@@ -5,6 +5,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/kalen-limited/hauler-rider/backend/internal/approvals"
+	"github.com/kalen-limited/hauler-rider/backend/internal/approvals/actions"
 	"github.com/kalen-limited/hauler-rider/backend/internal/branding"
 	"github.com/kalen-limited/hauler-rider/backend/internal/identity"
 )
@@ -164,7 +166,12 @@ func (h brandingHandlers) publish(w http.ResponseWriter, req *http.Request) {
 	if !decode(w, req, &body) {
 		return
 	}
-	t, err := h.deps.Branding.Publish(req.Context(), claimsFrom(req.Context()).Subject, chi.URLParam(req, "id"), body.Reason)
+	id := chi.URLParam(req, "id")
+	if sentForApproval(w, req, h.deps, approvals.Submission{Action: actions.BrandingPublish, Reason: body.Reason,
+		Target: "theme:" + id, Payload: actions.BrandingPayload{ThemeID: id}}) {
+		return
+	}
+	t, err := h.deps.Branding.Publish(req.Context(), claimsFrom(req.Context()).Subject, id, body.Reason)
 	if err != nil {
 		writeDomainError(w, req, err)
 		return

@@ -9,6 +9,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/kalen-limited/hauler-rider/backend/internal/approvals"
+	"github.com/kalen-limited/hauler-rider/backend/internal/approvals/actions"
 	"github.com/kalen-limited/hauler-rider/backend/internal/identity"
 	"github.com/kalen-limited/hauler-rider/backend/internal/privacy"
 )
@@ -192,8 +194,11 @@ func (h privacyHandlers) approve(w http.ResponseWriter, req *http.Request) {
 	if !decode(w, req, &body) {
 		return
 	}
-	if _, ok := h.requestIn(w, req); !ok {
-		return
+	pr, ok := h.requestIn(w, req)
+	if !ok || (pr.Kind == privacy.KindDelete && pr.Status == privacy.StatusRequested &&
+		sentForApproval(w, req, h.deps, approvals.Submission{Action: actions.PrivacyDelete, Reason: body.Reason, Country: deref(pr.Country),
+			Target: "privacy_request:" + pr.ID, Payload: actions.PrivacyPayload{RequestID: pr.ID}})) {
+		return // exports are never gated; a closed request gets the service's answer
 	}
 	r, err := h.deps.Privacy.Approve(req.Context(), claimsFrom(req.Context()).Subject, chi.URLParam(req, "id"), body.Reason)
 	respond(w, req, http.StatusOK, r, err)

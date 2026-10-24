@@ -1388,6 +1388,7 @@ paths:
                 borne_by: { type: string, enum: [PLATFORM, DRIVER] }
                 reason: { type: string, maxLength: 1000 }
       responses:
+        "202": { $ref: "#/components/responses/SentForApproval" }
         "201":
           description: Created
           content:
@@ -1609,6 +1610,7 @@ paths:
           application/json:
             schema: { $ref: "#/components/schemas/ReasonInput" }
       responses:
+        "202": { $ref: "#/components/responses/SentForApproval" }
         "200":
           description: OK
           content:
@@ -2050,6 +2052,7 @@ paths:
                 effective_from: { type: string, format: date-time }
                 reason: { type: string, minLength: 1 }
       responses:
+        "202": { $ref: "#/components/responses/SentForApproval" }
         "201": { description: Published, content: { application/json: { schema: { $ref: "#/components/schemas/ProfileVersion" } } } }
         "400": { $ref: "#/components/responses/Error" }
         "409": { $ref: "#/components/responses/Error" }
@@ -2066,6 +2069,7 @@ paths:
           application/json:
             schema: { type: object, required: [status, reason], properties: { status: { type: string, enum: [ACTIVE, INACTIVE] }, reason: { type: string, minLength: 1 } } }
       responses:
+        "202": { $ref: "#/components/responses/SentForApproval" }
         "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/PricingProfile" } } } }
         "409": { $ref: "#/components/responses/Error" }
   /admin/pricing/profiles/{id}/assignments:
@@ -2088,6 +2092,7 @@ paths:
                 priority: { type: integer, minimum: -1000, maximum: 1000 }
                 reason: { type: string, minLength: 1 }
       responses:
+        "202": { $ref: "#/components/responses/SentForApproval" }
         "201": { description: Assigned, content: { application/json: { schema: { $ref: "#/components/schemas/ProfileScope" } } } }
         "400": { $ref: "#/components/responses/Error" }
         "404": { $ref: "#/components/responses/Error" }
@@ -2117,6 +2122,7 @@ paths:
           application/json:
             schema: { $ref: "#/components/schemas/ReasonInput" }
       responses:
+        "202": { $ref: "#/components/responses/SentForApproval" }
         "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/PricingProfile" } } } }
         "409": { $ref: "#/components/responses/Error" }
   /admin/pricing/payees:
@@ -2333,6 +2339,7 @@ paths:
           application/json:
             schema: { $ref: "#/components/schemas/ReasonInput" }
       responses:
+        "202": { $ref: "#/components/responses/SentForApproval" }
         "200":
           description: OK
           content:
@@ -2996,6 +3003,7 @@ paths:
         - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ReasonInput" } } } }
       responses:
+        "202": { $ref: "#/components/responses/SentForApproval" }
         "200":
           description: Approved (PENDING)
           content:
@@ -3054,6 +3062,7 @@ paths:
                 fail_closed: { type: boolean }
                 reason: { type: string, minLength: 1 }
       responses:
+        "202": { $ref: "#/components/responses/SentForApproval" }
         "200":
           description: The country's switches
           content:
@@ -3269,6 +3278,7 @@ paths:
           application/json:
             schema: { $ref: "#/components/schemas/StaffInput" }
       responses:
+        "202": { $ref: "#/components/responses/SentForApproval" }
         "200":
           description: Staff list
           content:
@@ -3522,6 +3532,168 @@ paths:
       responses:
         "204": { description: Deleted }
         "404": { $ref: "#/components/responses/Error" }
+  /admin/approvals/requests:
+    get:
+      tags: [admin]
+      operationId: listApprovalRequests
+      summary: "The approvals inbox: pending requests in the caller's countries, the caller's own, or finished ones"
+      parameters:
+        - { name: box, in: query, schema: { type: string, enum: [pending, mine, done], default: pending } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/ApprovalRequest" } }
+        "403": { $ref: "#/components/responses/Error" }
+  /admin/approvals/requests/summary:
+    get:
+      tags: [admin]
+      operationId: getApprovalSummary
+      summary: "The nav badge: pending requests the caller could approve or reject now"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [actionable]
+                properties:
+                  actionable: { type: integer }
+        "403": { $ref: "#/components/responses/Error" }
+  /admin/approvals/requests/{id}:
+    get:
+      tags: [admin]
+      operationId: getApprovalRequest
+      summary: "One approval request with its readable change, steps and decisions (only inside the caller's countries)"
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApprovalRequest" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { description: "APPROVAL_NOT_FOUND", content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+  /admin/approvals/requests/{id}/approve:
+    post:
+      tags: [admin]
+      operationId: approveApprovalRequest
+      summary: "Approve the current step (audited). On the last approval the change runs at once as the requester of record; the request comes back EXECUTED or FAILED"
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ApprovalNoteInput" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApprovalRequest" }
+        "400": { $ref: "#/components/responses/Error" }
+        "403": { description: "APPROVAL_SELF (the requester) or APPROVAL_NOT_APPROVER (no listed role, or the step's roles you hold are covered)", content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { description: "APPROVAL_NOT_PENDING, APPROVAL_EXPIRED or APPROVAL_ALREADY_DECIDED", content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+  /admin/approvals/requests/{id}/reject:
+    post:
+      tags: [admin]
+      operationId: rejectApprovalRequest
+      summary: "Reject on the current step with a note (audited); nothing is applied"
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ApprovalNoteInput" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApprovalRequest" }
+        "400": { description: "APPROVAL_NOTE_REQUIRED", content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+  /admin/approvals/requests/{id}/cancel:
+    post:
+      tags: [admin]
+      operationId: cancelApprovalRequest
+      summary: "Withdraw your own pending request (audited)"
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ApprovalNoteInput" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApprovalRequest" }
+        "403": { description: "APPROVAL_NOT_REQUESTER", content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+  /admin/approvals/workflows:
+    get:
+      tags: [admin]
+      operationId: listApprovalWorkflows
+      summary: "Every approvable action with its workflow (off until saved enabled), and the roles and permissions steps may name (approvals.manage)"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApprovalWorkflowList" }
+        "403": { $ref: "#/components/responses/Error" }
+  /admin/approvals/workflows/{action}:
+    get:
+      tags: [admin]
+      operationId: getApprovalWorkflow
+      summary: "One action's workflow with every saved version (approvals.manage)"
+      parameters:
+        - { name: action, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApprovalWorkflowDetail" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { description: "APPROVAL_UNKNOWN_ACTION", content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+    put:
+      tags: [admin]
+      operationId: saveApprovalWorkflow
+      summary: "Save the next version of an action's workflow (approvals.manage, audited). Pending requests keep the version they started under"
+      parameters:
+        - { name: action, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ApprovalWorkflowInput" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApprovalWorkflowDetail" }
+        "400": { description: "REASON_REQUIRED or APPROVAL_WORKFLOW_INVALID (details.problems lists each one)", content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
 components:
   securitySchemes:
     bearerAuth:
@@ -3543,12 +3715,164 @@ components:
       description: "A random UUID v4 the app creates once per install (fraud checks); ignored when malformed"
       schema: { type: string, format: uuid }
   responses:
+    SentForApproval:
+      description: "Held for approval: the action's approval workflow is on and its conditions match, so the change was NOT applied. The body is the approval request (no error); the change runs when the workflow's steps are approved."
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApprovalAccepted" }
     Error:
       description: Error envelope
       content:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
   schemas:
+    ApprovalAccepted:
+      type: object
+      description: "The 202 body of a gated endpoint: the change was not applied; it waits for approval. No error envelope."
+      required: [approval_request]
+      properties:
+        approval_request: { $ref: "#/components/schemas/ApprovalRequest" }
+    ApprovalNoteInput:
+      type: object
+      properties:
+        note: { type: string, maxLength: 1000, description: "Required to reject" }
+    ApprovalPerson:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+    ApprovalChange:
+      type: object
+      required: [field, before, after]
+      properties:
+        field: { type: string }
+        before: { type: string }
+        after: { type: string }
+    ApprovalSummary:
+      type: object
+      required: [title, changes]
+      properties:
+        title: { type: string }
+        changes: { type: array, items: { $ref: "#/components/schemas/ApprovalChange" } }
+    ApprovalDecision:
+      type: object
+      required: [step, approver, decision, as_role, note, at]
+      properties:
+        step: { type: integer, description: "0-based step index" }
+        approver: { $ref: "#/components/schemas/ApprovalPerson" }
+        decision: { type: string, enum: [APPROVE, REJECT] }
+        as_role: { type: string, description: "The role (or perm:<key>) the approval counted as" }
+        note: { type: string }
+        at: { type: string, format: date-time }
+    ApprovalConditions:
+      type: object
+      properties:
+        amount_min: { $ref: "#/components/schemas/Money" }
+        amount_max: { $ref: "#/components/schemas/Money" }
+        countries: { type: array, items: { type: string } }
+    ApprovalStep:
+      type: object
+      required: [name, mode, roles, approvals]
+      properties:
+        name: { type: string, maxLength: 80 }
+        mode: { type: string, enum: [ANY, ALL], description: "ANY: `approvals` people holding any listed role (or the permission). ALL: one distinct person per listed role (and the permission)" }
+        roles: { type: array, items: { type: string } }
+        permission: { type: string }
+        approvals: { type: integer, minimum: 1, maximum: 10 }
+    ApprovalDefinition:
+      type: object
+      required: [conditions, steps, expire_hours]
+      properties:
+        conditions: { $ref: "#/components/schemas/ApprovalConditions" }
+        steps: { type: array, items: { $ref: "#/components/schemas/ApprovalStep" } }
+        expire_hours: { type: integer, minimum: 1, maximum: 720 }
+    ApprovalRequest:
+      type: object
+      required: [id, action, action_label, status, requester, reason, country, amount, target, summary, payload, workflow,
+        workflow_version, current_step, decisions, can_decide, expires_at, created_at, decided_at, executed_at, error]
+      properties:
+        id: { type: string, format: uuid }
+        action: { type: string }
+        action_label: { type: string }
+        status: { type: string, enum: [PENDING, APPROVED, EXECUTING, EXECUTED, FAILED, REJECTED, EXPIRED, CANCELLED] }
+        requester: { $ref: "#/components/schemas/ApprovalPerson" }
+        reason: { type: string }
+        country: { type: [string, "null"] }
+        amount: { oneOf: [{ $ref: "#/components/schemas/Money" }, { type: "null" }] }
+        target: { type: string }
+        summary: { $ref: "#/components/schemas/ApprovalSummary" }
+        payload: { type: object, additionalProperties: true, description: "What the action's executor runs from" }
+        workflow: { $ref: "#/components/schemas/ApprovalDefinition" }
+        workflow_version: { type: integer }
+        current_step: { type: integer }
+        decisions: { type: array, items: { $ref: "#/components/schemas/ApprovalDecision" } }
+        can_decide: { type: boolean, description: "The caller may approve or reject the current step now" }
+        expires_at: { type: string, format: date-time }
+        created_at: { type: string, format: date-time }
+        decided_at: { type: [string, "null"], format: date-time }
+        executed_at: { type: [string, "null"], format: date-time }
+        result: { description: "The executed action's response" }
+        error: { type: [string, "null"], description: "Error code when the action FAILED" }
+    ApprovalAction:
+      type: object
+      required: [key, label, description, group, permission, scoped]
+      properties:
+        key: { type: string }
+        label: { type: string }
+        description: { type: string }
+        group: { type: string }
+        permission: { type: string }
+        condition: { type: string, enum: [amount], description: "The numeric field conditions may test" }
+        scoped: { type: boolean, description: "Tied to a country (a country condition applies)" }
+    ApprovalWorkflow:
+      type: object
+      required: [action, enabled, definition, version, updated_by, updated_at]
+      properties:
+        action: { type: string }
+        enabled: { type: boolean }
+        definition: { $ref: "#/components/schemas/ApprovalDefinition" }
+        version: { type: integer, description: "0 = never saved" }
+        updated_by: { type: [string, "null"] }
+        updated_at: { type: [string, "null"], format: date-time }
+    ApprovalActionWorkflow:
+      type: object
+      required: [action, workflow]
+      properties:
+        action: { $ref: "#/components/schemas/ApprovalAction" }
+        workflow: { $ref: "#/components/schemas/ApprovalWorkflow" }
+    ApprovalWorkflowVersion:
+      type: object
+      required: [version, enabled, definition, created_by, by_name, reason, created_at]
+      properties:
+        version: { type: integer }
+        enabled: { type: boolean }
+        definition: { $ref: "#/components/schemas/ApprovalDefinition" }
+        created_by: { type: [string, "null"] }
+        by_name: { type: [string, "null"] }
+        reason: { type: string }
+        created_at: { type: string, format: date-time }
+    ApprovalWorkflowDetail:
+      allOf:
+        - { $ref: "#/components/schemas/ApprovalActionWorkflow" }
+        - type: object
+          required: [history]
+          properties:
+            history: { type: array, items: { $ref: "#/components/schemas/ApprovalWorkflowVersion" } }
+    ApprovalWorkflowList:
+      type: object
+      required: [data, roles, permissions]
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/ApprovalActionWorkflow" } }
+        roles: { type: array, items: { type: string } }
+        permissions: { type: array, items: { $ref: "#/components/schemas/Permission" } }
+    ApprovalWorkflowInput:
+      type: object
+      required: [enabled, definition, reason]
+      properties:
+        enabled: { type: boolean }
+        definition: { $ref: "#/components/schemas/ApprovalDefinition" }
+        reason: { type: string, minLength: 1 }
     Health:
       type: object
       required: [status, version]
@@ -4724,6 +5048,7 @@ components:
         email: { type: string, description: "Dashboard sign-in email" }
         password: { type: string, description: "Sets a new password (at least 6 characters); empty keeps the current one" }
         roles: { type: array, items: { type: string } }
+        reason: { type: string, description: "Why (required when the role change is held for approval)" }
     Party:
       type: object
       required: [id, phone]

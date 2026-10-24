@@ -11,16 +11,23 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { EASE } from "@/components/ui/motion";
+import { useApprovalCount } from "@/features/approvals/hooks";
 import { useOpenSos } from "@/features/safety/hooks";
 import { useBrand } from "@/lib/brand";
 import { isActive, NAV_GROUPS, type NavGroup, type NavItem } from "./nav";
 
 const OPEN_KEY = "admin.nav.open-group";
 
+/** A count per page href, shown as a badge on its link. */
+type Badges = Record<string, number>;
+
 export function Sidebar() {
   const pathname = usePathname();
   const { data: brand } = useBrand();
   const sos = useOpenSos();
+  const approvals = useApprovalCount().data ?? 0;
+  // Counts shown next to a page: open SOS alerts, approvals waiting for this person.
+  const badges: Badges = { "/safety": sos, "/approvals": approvals };
   const name = brand?.brand.name ?? "";
   const [open, setOpen] = useState<string>();
 
@@ -67,7 +74,7 @@ export function Sidebar() {
               pathname={pathname}
               open={open === group.title}
               onToggle={() => toggle(group.title)}
-              sos={sos}
+              badges={badges}
             />
           ) : (
             <div key={group.title} className="grid gap-1">
@@ -79,7 +86,7 @@ export function Sidebar() {
                   key={item.href}
                   item={item}
                   active={isActive(pathname, item.href)}
-                  badge={item.href === "/safety" ? sos : 0}
+                  badge={badges[item.href] ?? 0}
                 />
               ))}
             </div>
@@ -96,17 +103,17 @@ function DropdownGroup({
   pathname,
   open,
   onToggle,
-  sos,
+  badges,
 }: {
   group: NavGroup;
   pathname: string;
   open: boolean;
   onToggle: () => void;
-  sos: number;
+  badges: Badges;
 }) {
   const Icon = group.icon;
   const holdsActive = group.items.some((i) => isActive(pathname, i.href));
-  const badge = group.items.some((i) => i.href === "/safety") ? sos : 0;
+  const badge = group.items.reduce((n, i) => n + (badges[i.href] ?? 0), 0);
   const id = `nav-${group.title.toLowerCase()}`;
   return (
     <div className="grid gap-1">
@@ -146,7 +153,7 @@ function DropdownGroup({
                 key={item.href}
                 item={item}
                 active={isActive(pathname, item.href)}
-                badge={item.href === "/safety" ? sos : 0}
+                badge={badges[item.href] ?? 0}
               />
             ))}
           </motion.div>

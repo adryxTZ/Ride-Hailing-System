@@ -35,6 +35,7 @@ export class ApiError extends Error {
     message: string,
     readonly code?: string,
     readonly status?: number,
+    readonly details?: Record<string, unknown>,
   ) {
     super(message);
   }
@@ -43,6 +44,13 @@ export class ApiError extends Error {
 /** Unwraps an openapi-fetch result: the data, or an ApiError. */
 export function unwrap<T>(r: { data?: T; error?: unknown; response: Response }): T {
   if (r.data !== undefined && !r.error) return r.data;
-  const e = (r.error as { error?: { message?: string; code?: string } } | undefined)?.error;
-  throw new ApiError(e?.message ?? `Request failed (${r.response.status})`, e?.code, r.response.status);
+  const e = (
+    r.error as { error?: { message?: string; code?: string; details?: Record<string, unknown> } } | undefined
+  )?.error;
+  throw new ApiError(
+    e?.message ?? `Request failed (${r.response.status})`,
+    e?.code,
+    r.response.status,
+    e?.details,
+  );
 }

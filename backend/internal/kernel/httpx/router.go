@@ -3,6 +3,7 @@ package httpx
 import (
 	"context"
 	"encoding/json"
+	"github.com/kalen-limited/hauler-rider/backend/internal/approvals"
 	"github.com/kalen-limited/hauler-rider/backend/internal/branding"
 	"github.com/kalen-limited/hauler-rider/backend/internal/compliance"
 	"github.com/kalen-limited/hauler-rider/backend/internal/dispatch"
@@ -87,6 +88,7 @@ type Deps struct {
 	Fraud         *fraud.Service              // fraud flags and the review queue (nil = off)
 	Privacy       *privacy.Service            // consent, privacy requests, retention (nil = off)
 	Refunds       *refunds.Service            // staff refunds on completed trips (nil = off)
+	Approvals     *approvals.Service          // approval workflows and the inbox (nil = every change applies at once)
 	PublicAPIURL  string                      // public API base for links (receipt PDFs); "" = the request's host
 	PublicWebURL  string                      // base of public links (share pages); empty = the request's own host
 	CancelReasons json.RawMessage             // seed/cancel_reasons.json, served verbatim
@@ -147,6 +149,7 @@ func New(d Deps) http.Handler {
 		mountPrivacy(v1, d)
 		mountTripMoney(v1, d)
 		mountGeofences(v1, d)
+		mountApprovals(v1, d)
 	})
 
 	mountSharePage(r, d) // public live-trip page at /share/{token}

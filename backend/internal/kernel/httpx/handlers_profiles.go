@@ -7,6 +7,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
+	"github.com/kalen-limited/hauler-rider/backend/internal/approvals"
+	"github.com/kalen-limited/hauler-rider/backend/internal/approvals/actions"
 	"github.com/kalen-limited/hauler-rider/backend/internal/identity"
 	"github.com/kalen-limited/hauler-rider/backend/internal/profiles"
 )
@@ -103,7 +105,9 @@ func (h profileHandlers) publish(w http.ResponseWriter, req *http.Request) {
 	if !decode(w, req, &body) {
 		return
 	}
-	if _, ok := h.profileIn(w, req); !ok {
+	p, ok := h.profileIn(w, req)
+	if !ok || sentForApproval(w, req, h.deps, approvals.Submission{Action: actions.ProfilePublish, Reason: body.Reason,
+		Country: p.Country, Target: "pricing_profile:" + p.ID, Payload: actions.ProfileVersionPayload{ProfileID: p.ID, Version: body}}) {
 		return
 	}
 	v, err := h.deps.Profiles.Publish(req.Context(), claimsFrom(req.Context()).Subject, chi.URLParam(req, "id"), body)
@@ -120,7 +124,9 @@ func (h profileHandlers) status(w http.ResponseWriter, req *http.Request) {
 	if !decode(w, req, &body) {
 		return
 	}
-	if _, ok := h.profileIn(w, req); !ok {
+	cur, ok := h.profileIn(w, req)
+	if !ok || sentForApproval(w, req, h.deps, approvals.Submission{Action: actions.ProfileStatus, Reason: body.Reason,
+		Country: cur.Country, Target: "pricing_profile:" + cur.ID, Payload: actions.ProfileStatusPayload{ProfileID: cur.ID, Status: body.Status}}) {
 		return
 	}
 	p, err := h.deps.Profiles.SetStatus(req.Context(), claimsFrom(req.Context()).Subject, chi.URLParam(req, "id"), body.Status, body.Reason)
@@ -132,7 +138,9 @@ func (h profileHandlers) assign(w http.ResponseWriter, req *http.Request) {
 	if !decode(w, req, &body) {
 		return
 	}
-	if _, ok := h.profileIn(w, req); !ok {
+	p, ok := h.profileIn(w, req)
+	if !ok || sentForApproval(w, req, h.deps, approvals.Submission{Action: actions.ProfileAssign, Reason: body.Reason,
+		Country: p.Country, Target: "pricing_profile:" + p.ID, Payload: actions.ProfileAssignPayload{ProfileID: p.ID, Assign: body}}) {
 		return
 	}
 	sc, err := h.deps.Profiles.Assign(req.Context(), claimsFrom(req.Context()).Subject, chi.URLParam(req, "id"), body)
@@ -156,7 +164,9 @@ func (h profileHandlers) makeDefault(w http.ResponseWriter, req *http.Request) {
 	if !decode(w, req, &body) {
 		return
 	}
-	if _, ok := h.profileIn(w, req); !ok {
+	cur, ok := h.profileIn(w, req)
+	if !ok || sentForApproval(w, req, h.deps, approvals.Submission{Action: actions.ProfileDefault, Reason: body.Reason,
+		Country: cur.Country, Target: "pricing_profile:" + cur.ID, Payload: actions.ProfileDefaultPayload{ProfileID: cur.ID}}) {
 		return
 	}
 	p, err := h.deps.Profiles.MakeDefault(req.Context(), claimsFrom(req.Context()).Subject, chi.URLParam(req, "id"), body.Reason)

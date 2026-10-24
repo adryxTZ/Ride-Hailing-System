@@ -1,9 +1,11 @@
 /** The dashboard's sections, grouped for the side navigation. */
 import {
   Car,
+  ClipboardCheck,
   Cpu,
   FileCheck,
   FileClock,
+  GitPullRequestArrow,
   Hexagon,
   KeyRound,
   Landmark,
@@ -46,6 +48,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/", label: "Overview", icon: LayoutGrid },
       { href: "/live", label: "Live map", icon: MapIcon },
       { href: "/trips", label: "Trips", icon: Route },
+      { href: "/approvals", label: "Approvals", icon: ClipboardCheck },
     ],
   },
   {
@@ -101,7 +104,10 @@ export const NAV_GROUPS: NavGroup[] = [
     title: "Settings",
     collapsible: true,
     icon: Settings,
-    items: [{ href: "/settings/branding", label: "Branding", icon: Palette }],
+    items: [
+      { href: "/settings/branding", label: "Branding", icon: Palette },
+      { href: "/settings/approvals", label: "Approval workflows", icon: GitPullRequestArrow },
+    ],
   },
 ];
 
